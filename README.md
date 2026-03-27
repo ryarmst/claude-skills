@@ -9,7 +9,12 @@ Add the marketplace to Claude Code:
 claude plugin marketplace add ryarmst/claude-skills
 ```
 
-Then install individual plugins:
+Install all skills and agents in one shot:
+```bash
+curl -s https://raw.githubusercontent.com/ryarmst/claude-skills/main/.claude-plugin/marketplace.json | python3 -c "import json,sys; [print(p['name']) for p in json.load(sys.stdin)['plugins']]" | xargs -I{} claude plugin install {}@ryarmst
+```
+
+Or install individually:
 ```bash
 claude plugin install <skill-name>@ryarmst
 ```
@@ -21,10 +26,18 @@ Once installed, skills are auto-invoked by Claude when relevant, or triggered ma
 ## Structure
 ```
 claude-skills/
-├── <skill-name>/
-│   ├── .claude-plugin/plugin.json
-│   └── skills/<skill-name>/SKILL.md
-├── generate_marketplace.py   # regenerates marketplace.json
+├── skills/
+│   └── <skill-name>/
+│       ├── .claude-plugin/plugin.json
+│       └── SKILL.md
+├── agents/
+│   └── <agent-name>.md
+├── generate_marketplace.py   # regenerates marketplace.json + scaffolds plugin.json
 └── .claude-plugin/
     └── marketplace.json      # auto-updated on every push
 ```
+
+## Contributing
+
+1. Add a new folder under `skills/` or `agents/` with a `SKILL.md` containing `name` and `description` frontmatter
+2. Push to `main` — `marketplace.json` and `plugin.json` files update automatically via GitHub Actions

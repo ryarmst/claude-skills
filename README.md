@@ -4,20 +4,14 @@ A collection of Claude Code skills and agents, installable as a plugin marketpla
 
 ## Install
 
-Add the marketplace to Claude Code:
+> **Note:** The recommended install method is the direct install below. The plugin-based install (`claude plugin install`) is affected by a [known Claude Code bug](https://github.com/anthropics/claude-code/issues/15178) where plugin skills are not injected into Claude's context, preventing auto-invocation.
+
+Run this to install all skills and agents directly into `~/.claude/skills/` and `~/.claude/agents/`:
 ```bash
-claude plugin marketplace add ryarmst/claude-skills
+curl -fsSL https://raw.githubusercontent.com/ryarmst/claude-skills/main/install.sh | bash
 ```
 
-Install all skills and agents in one shot:
-```bash
-curl -s https://raw.githubusercontent.com/ryarmst/claude-skills/main/.claude-plugin/marketplace.json | python3 -c "import json,sys; [print(p['name']) for p in json.load(sys.stdin)['plugins']]" | xargs -I{} claude plugin install {}@ryarmst
-```
-
-Or install individually:
-```bash
-claude plugin install <skill-name>@ryarmst
-```
+Then restart Claude Code.
 
 ## Usage
 
@@ -32,6 +26,7 @@ claude-skills/
 │       └── SKILL.md
 ├── agents/
 │   └── <agent-name>.md
+├── install.sh                # direct install script
 ├── generate_marketplace.py   # regenerates marketplace.json + scaffolds plugin.json
 └── .claude-plugin/
     └── marketplace.json      # auto-updated on every push

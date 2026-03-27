@@ -8,7 +8,7 @@ A collection of Claude Code skills and agents, installable as a plugin marketpla
 
 Run this to install all skills and agents directly into `~/.claude/skills/` and `~/.claude/agents/`:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ryarmst/claude-skills/main/install.sh | bash
+curl -fsSL [https://raw.githubusercontent.com/ryarmst/claude-skills/main/install.sh](https://raw.githubusercontent.com/ryarmst/claude-skills/refs/heads/main/install.sh) | bash
 ```
 
 Then restart Claude Code.

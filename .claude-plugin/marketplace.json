@@ -8,5 +8,36 @@
     "description": "Claude Code skills and agents by ryarmst",
     "homepage": "https://github.com/ryarmst/claude-skills"
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "apk-decompile",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/ryarmst/claude-skills.git",
+        "path": "skills/apk-decompile"
+      },
+      "description": "Decompiles Android APK files using jadx, spawning an async subagent so decompilation runs in the background while the main session stays free for other work. Use this skill whenever a user mentions decompiling, reverse engineering, or analyzing an APK; wants to inspect Android app source code, manifest, or resources; or asks to set up for mobile security testing or bug bounty recon on an Android target."
+    },
+    {
+      "name": "markdown-document",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/ryarmst/claude-skills.git",
+        "path": "skills/markdown-document"
+      },
+      "description": "Apply this skill whenever writing technical documentation, README files, command references, step-by-step guides, or any prose that includes code blocks or CLI instructions."
+    },
+    {
+      "name": "jadx-decompiler",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/ryarmst/claude-skills.git",
+        "path": "agents"
+      },
+      "description": "Specialist subagent that runs jadx to decompile an Android APK. Invoked by the apk-decompile skill. Handles the full jadx execution, monitors progress, validates output, and returns a structured summary to the orchestrating agent.",
+      "tags": [
+        "agent"
+      ]
+    }
+  ]
 }

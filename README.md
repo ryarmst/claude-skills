@@ -15,7 +15,7 @@ Then restart Claude Code.
 
 ## Usage
 
-Once installed, skills are auto-invoked by Claude when relevant, or triggered manually with `/skill-name`.
+Once installed, skills are auto-invoked by Claude when relevant, or triggered manually with `/skill-name`. Agents are available via `@agent-name`.
 
 ## Structure
 ```
@@ -34,5 +34,5 @@ claude-skills/
 
 ## Contributing
 
-1. Add a new folder under `skills/` or `agents/` with a `SKILL.md` containing `name` and `description` frontmatter
+1. Add a new folder under `skills/` with a `SKILL.md` containing `name` and `description` frontmatter, or add a `.md` file under `agents/`
 2. Push to `main` — `marketplace.json` and `plugin.json` files update automatically via GitHub Actions

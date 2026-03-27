@@ -1,0 +1,20 @@
+name: Update marketplace.json
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '.claude-plugin/marketplace.json'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 generate_marketplace.py
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: regenerate marketplace.json"
+          file_pattern: ".claude-plugin/marketplace.json"

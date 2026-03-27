@@ -1,17 +1,1 @@
-# install-all.sh
-#!/bin/bash
-set -e
-
-MARKETPLACE="ryarmst"
-PLUGINS=(
-  apk-decompile
-  markdown-document
-  jadx-decompiler
-)
-
-for plugin in "${PLUGINS[@]}"; do
-  echo "Installing $plugin..."
-  claude plugin install "$plugin@$MARKETPLACE"
-done
-
-echo "Done."
+for p in apk-decompile markdown-document jadx-decompiler; do claude plugin install "$p@ryarmst"; done

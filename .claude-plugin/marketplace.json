@@ -1,5 +1,5 @@
 {
-  "name": "claude-skills",
+  "name": "ryarmst",
   "owner": {
     "name": "ryarmst",
     "email": "your@email.com"
@@ -11,6 +11,7 @@
   "plugins": [
     {
       "name": "apk-decompile",
+      "version": "1.0.0",
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/ryarmst/claude-skills.git",
@@ -20,6 +21,7 @@
     },
     {
       "name": "markdown-document",
+      "version": "1.0.0",
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/ryarmst/claude-skills.git",
@@ -29,6 +31,7 @@
     },
     {
       "name": "jadx-decompiler",
+      "version": "1.0.0",
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/ryarmst/claude-skills.git",

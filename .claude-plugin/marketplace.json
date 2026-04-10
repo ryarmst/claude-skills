@@ -40,6 +40,16 @@
       "description": "Apply this skill whenever writing technical documentation, README files, command references, step-by-step guides, or any prose that includes code blocks or CLI instructions."
     },
     {
+      "name": "security-quiz-builder",
+      "version": "1.0.0",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/ryarmst/claude-skills.git",
+        "path": "skills/security-quiz-builder"
+      },
+      "description": "Generate high-quality multiple-choice quiz questions from a folder of structured markdown files covering software security topics, then bundle the output for Microsoft Forms import. Use this skill whenever the user wants to build quizzes, tests, or assessments from security training material, application security course notes, OWASP topic files, or any folder of markdown topic files where each file represents one subject. Trigger this skill even if the user only says things like \"make me a quiz from these notes,\" \"turn this folder into questions,\" or \"I need MCQs for my security class\" \u2014 the skill handles topic ingestion, optional web-resource scraping, question generation with varied difficulty, and MS Forms-compatible export."
+    },
+    {
       "name": "jadx-decompiler",
       "version": "1.0.0",
       "source": {

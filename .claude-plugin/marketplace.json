@@ -29,6 +29,26 @@
       "description": "Comprehensively maps the attack surface of a decompiled Android APK by extracting deep links, HTTP endpoints and APIs, intents, exported components, insecure configurations, and other entry points. Stores findings in a SQLite database for queryable, persistent recon, and generates a structured markdown report. Use this skill whenever a user wants to map an app's surface area, enumerate entry points, understand what an app exposes, find attack vectors, or do recon before active testing. Trigger after apk-decompile completes, or any time the user has a jadx output directory and wants to understand what the app does and exposes."
     },
     {
+      "name": "burp-bambda-persistence",
+      "version": "1.0.0",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/ryarmst/claude-skills.git",
+        "path": "skills/burp-bambda-persistence"
+      },
+      "description": "Persist state across Burp Bambda invocations - scan checks, custom actions, filters - using either the Java Preferences API (built-in, no setup) or JDBC to a local database server (Postgres, MySQL, SQLite). Use when a Bambda needs to remember things between invocations - dedupe issues across hosts in a scan, store seen JWT signing keys, accumulate per-host baselines, track which Collaborator interactions have already been reported, share state between a passive check and an active check, or build a corpus of observations for later analysis. Bambdas have NO native persistence mechanism, so this skill is the only sanctioned way to do it. Triggers on phrases like \"remember between scan runs\", \"dedupe across hosts\", \"track seen X in a Bambda\", \"store state in a Burp scan check\", \"persist data from a Bambda\", \"share state between Bambdas\"."
+    },
+    {
+      "name": "burp-bambdas",
+      "version": "1.0.0",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/ryarmst/claude-skills.git",
+        "path": "skills/burp-bambdas"
+      },
+      "description": "Author Burp Suite Bambda scripts (custom scan checks, HTTP/WebSocket history filters, custom columns, custom actions, and match-and-replace rules). Use whenever the user wants to write, modify, debug, or review a `.bambda` file or any Java snippet that runs inside Burp Suite Professional/Community via the Bambda runtime \u2014 including scan checks (active/passive, per-host/per-request/per-insertion-point), Proxy HTTP/WS history view filters, custom table columns, Repeater/Intruder custom actions, or proxy match-and-replace rules. Triggers on phrases like \"Bambda\", \"custom scan check\", \"Burp filter script\", \"view filter\", \"custom column for Burp\", \"Burp custom action\", \"Montoya scan check\", or any reference to Burp's `function: SCAN_CHECK_*`, `VIEW_FILTER`, `CUSTOM_COLUMN`, `CUSTOM_ACTION`, `MATCH_AND_REPLACE_*` constants."
+    },
+    {
       "name": "markdown-document",
       "version": "1.0.0",
       "source": {

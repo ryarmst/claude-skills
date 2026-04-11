@@ -28,7 +28,6 @@ CONFIG = {
     # e.g. `claude plugin install apk-decompile@ryarmst`
     "repo_owner": "ryarmst",
     "repo_name": "claude-skills",
-    "owner_email": "your@email.com",
     "default_version": "1.0.0",
 }
 
@@ -191,7 +190,6 @@ def main():
         "name": CONFIG["repo_owner"],
         "owner": {
             "name": CONFIG["repo_owner"],
-            "email": CONFIG["owner_email"]
         },
         "metadata": {
             "description": f"Claude Code skills and agents by {CONFIG['repo_owner']}",

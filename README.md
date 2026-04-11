@@ -8,7 +8,7 @@ A collection of Claude Code skills and agents, installable as a plugin marketpla
 
 Run this to install all skills and agents directly into `~/.claude/skills/` and `~/.claude/agents/`:
 ```bash
-curl -fsSL [https://raw.githubusercontent.com/ryarmst/claude-skills/main/install.sh](https://raw.githubusercontent.com/ryarmst/claude-skills/refs/heads/main/install.sh) | bash
+curl -fsSL https://raw.githubusercontent.com/ryarmst/claude-skills/main/install.sh | bash
 ```
 
 Then restart Claude Code.
@@ -22,14 +22,13 @@ Once installed, skills are auto-invoked by Claude when relevant, or triggered ma
 claude-skills/
 ├── skills/
 │   └── <skill-name>/
-│       ├── .claude-plugin/plugin.json
-│       └── SKILL.md
+│       └── SKILL.md          # (plus optional scripts/ and references/)
 ├── agents/
 │   └── <agent-name>.md
 ├── install.sh                # direct install script
-├── generate_marketplace.py   # regenerates marketplace.json + scaffolds plugin.json
+├── generate_marketplace.py   # regenerates marketplace.json
 └── .claude-plugin/
-    └── marketplace.json      # auto-updated on every push
+    └── marketplace.json      # auto-updated on every push via GitHub Actions
 ```
 
 ## Contributing

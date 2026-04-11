@@ -16,6 +16,12 @@ compatibility:
 
 # APK Surface Map Skill
 
+> **Status — work in progress:** Several supporting files referenced below are not yet
+> in the repo (`scripts/init_db.py`, `scripts/generate_report.py`,
+> `references/report-template.md`, `references/grep-patterns.md`). The inline
+> fallback paths and SQL examples still work; the helper scripts just need to be
+> created before those steps can call them by path.
+
 Maps the full attack surface of a decompiled APK into a SQLite database, then
 generates a markdown report. Runs extraction domains in parallel subagents for speed.
 

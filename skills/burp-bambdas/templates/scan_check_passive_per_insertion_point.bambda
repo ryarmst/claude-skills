@@ -1,0 +1,44 @@
+id: 00000000-0000-0000-0000-000000000000
+name: TEMPLATE - Passive per insertion point
+function: SCAN_CHECK_PASSIVE_PER_INSERTION_POINT
+location: SCANNER
+source: |
+  /**
+   * TEMPLATE: passive scan check, runs once per insertion point.
+   * Inspects insertionPoint.baseValue() without sending traffic.
+   * Use for "this parameter looks interesting" style flags.
+   *
+   * @author YOUR NAME
+   **/
+
+  if (insertionPoint == null) {
+      return AuditResult.auditResult();
+  }
+
+  var name  = insertionPoint.name();
+  var value = insertionPoint.baseValue();
+
+  if (value == null || value.isEmpty()) {
+      return AuditResult.auditResult();
+  }
+
+  // Example: detect a JWT in any parameter.
+  if (!value.matches("^eyJ[A-Za-z0-9_-]+\\.eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]*$")) {
+      return AuditResult.auditResult();
+  }
+
+  return AuditResult.auditResult(
+      AuditIssue.auditIssue(
+          "JWT in parameter: " + name,
+          "<p>Parameter <code>" + api().utilities().htmlUtils().encode(name) + "</code> contains a JWT. "
+              + "Verify signature validation, algorithm pinning, and expiration enforcement.</p>",
+          "<p>Review JWT handling in this endpoint.</p>",
+          requestResponse.request().url(),
+          AuditIssueSeverity.INFORMATION,
+          AuditIssueConfidence.FIRM,
+          "",
+          "",
+          AuditIssueSeverity.INFORMATION,
+          requestResponse
+      )
+  );

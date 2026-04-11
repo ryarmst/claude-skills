@@ -1,0 +1,58 @@
+id: 00000000-0000-0000-0000-000000000000
+name: TEMPLATE - Active per request
+function: SCAN_CHECK_ACTIVE_PER_REQUEST
+location: SCANNER
+source: |
+  /**
+   * TEMPLATE: active scan check, runs once per audited base request.
+   * Sends crafted requests derived from the base request as a whole
+   * (does NOT target specific parameters - use per-insertion-point for that).
+   *
+   * @author YOUR NAME
+   **/
+
+  // === CONFIG ===
+  final String  TEST_HEADER = "Origin";
+  final boolean REQUIRE_BASE_RESPONSE = true;
+
+  // === SANITY ===
+  if (REQUIRE_BASE_RESPONSE && !requestResponse.hasResponse()) {
+      return AuditResult.auditResult();
+  }
+
+  var baseReq = requestResponse.request();
+
+  // === PROBE ===
+  var canary = "https://" + api().utilities().randomUtils().randomString(10) + ".example.invalid";
+  var probe  = http.sendRequest(baseReq.withHeader(TEST_HEADER, canary));
+
+  if (!probe.hasResponse()) {
+      return AuditResult.auditResult();
+  }
+
+  var aco = probe.response().headerValue("Access-Control-Allow-Origin");
+  if (aco == null || !aco.equalsIgnoreCase(canary)) {
+      return AuditResult.auditResult();
+  }
+
+  // === REPORT ===
+  var creds = "true".equalsIgnoreCase(probe.response().headerValue("Access-Control-Allow-Credentials"));
+  var sev   = creds ? AuditIssueSeverity.HIGH : AuditIssueSeverity.MEDIUM;
+
+  return AuditResult.auditResult(
+      AuditIssue.auditIssue(
+          "CORS: arbitrary origin reflection" + (creds ? " with credentials" : ""),
+          "<p>The server reflected the attacker-controlled <code>" + TEST_HEADER + "</code> header "
+              + "<code>" + api().utilities().htmlUtils().encode(canary) + "</code> in "
+              + "<code>Access-Control-Allow-Origin</code>"
+              + (creds ? " and set <code>Access-Control-Allow-Credentials: true</code>." : ".") + "</p>",
+          "<p>Use a strict allowlist of permitted origins. Always include <code>Vary: Origin</code>.</p>",
+          baseReq.url(),
+          sev,
+          AuditIssueConfidence.FIRM,
+          "",
+          "",
+          sev,
+          probe
+      )
+  );

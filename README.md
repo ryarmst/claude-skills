@@ -31,7 +31,18 @@ claude-skills/
     └── marketplace.json      # auto-updated on every push via GitHub Actions
 ```
 
+## Skills
+
+| Skill | Description |
+|---|---|
+| `apk-decompile` | Decompile an Android APK with jadx via an async background subagent |
+| `apk-surface-map` | Map the full attack surface of a decompiled APK into a SQLite DB and markdown report |
+| `burp-bambdas` | Author any type of Burp Suite Bambda (scan checks, view filters, custom columns, custom actions, match-and-replace) |
+| `burp-bambda-persistence` | Persist state across Bambda invocations using the Java Preferences API or JDBC |
+| `markdown-document` | Write clear, well-structured technical documentation and READMEs |
+| `security-quiz-builder` | Generate MCQ quiz questions from security markdown topics and bundle for Microsoft Forms |
+
 ## Contributing
 
 1. Add a new folder under `skills/` with a `SKILL.md` containing `name` and `description` frontmatter, or add a `.md` file under `agents/`
-2. Push to `main` — `marketplace.json` and `plugin.json` files update automatically via GitHub Actions
+2. Push to `main` — `marketplace.json` updates automatically via GitHub Actions

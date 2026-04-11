@@ -1,0 +1,46 @@
+id: 00000000-0000-0000-0000-000000000000
+name: TEMPLATE - Passive per request
+function: SCAN_CHECK_PASSIVE_PER_REQUEST
+location: SCANNER
+source: |
+  /**
+   * TEMPLATE: passive scan check, runs once per audited base request.
+   * Reads requestResponse only. Does not send any traffic.
+   *
+   * @author YOUR NAME
+   **/
+
+  // === CONFIG ===
+  final String  HEADER_TO_CHECK = "Content-Security-Policy";
+  final boolean ONLY_HTML_RESPONSES = true;
+
+  // === SANITY ===
+  if (!requestResponse.hasResponse()) {
+      return AuditResult.auditResult();
+  }
+
+  var res = requestResponse.response();
+
+  if (ONLY_HTML_RESPONSES && res.mimeType() != MimeType.HTML) {
+      return AuditResult.auditResult();
+  }
+
+  if (res.hasHeader(HEADER_TO_CHECK)) {
+      return AuditResult.auditResult();
+  }
+
+  // === REPORT ===
+  return AuditResult.auditResult(
+      AuditIssue.auditIssue(
+          HEADER_TO_CHECK + " header missing",
+          "<p>The response does not include a <code>" + HEADER_TO_CHECK + "</code> header.</p>",
+          "<p>Add a <code>" + HEADER_TO_CHECK + "</code> header with an appropriate policy.</p>",
+          requestResponse.request().url(),
+          AuditIssueSeverity.LOW,
+          AuditIssueConfidence.FIRM,
+          "",
+          "",
+          AuditIssueSeverity.LOW,
+          requestResponse
+      )
+  );

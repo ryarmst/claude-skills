@@ -1,0 +1,44 @@
+id: 00000000-0000-0000-0000-000000000000
+name: TEMPLATE - Passive per host
+function: SCAN_CHECK_PASSIVE_PER_HOST
+location: SCANNER
+source: |
+  /**
+   * TEMPLATE: passive scan check, runs once per host.
+   * Use for host-level findings that should be reported once, not per request.
+   *
+   * @author YOUR NAME
+   **/
+
+  if (!requestResponse.hasResponse()) {
+      return AuditResult.auditResult();
+  }
+
+  var res = requestResponse.response();
+  var server = res.headerValue("Server");
+
+  if (server == null || server.isBlank()) {
+      return AuditResult.auditResult();
+  }
+
+  // Only flag banners that include a version number.
+  if (!server.matches(".*\\d+(\\.\\d+)+.*")) {
+      return AuditResult.auditResult();
+  }
+
+  return AuditResult.auditResult(
+      AuditIssue.auditIssue(
+          "Server banner discloses version",
+          "<p>The host returns a versioned <code>Server</code> header: <code>"
+              + api().utilities().htmlUtils().encode(server)
+              + "</code></p>",
+          "<p>Strip or anonymize the <code>Server</code> header at the reverse proxy.</p>",
+          requestResponse.request().url(),
+          AuditIssueSeverity.INFORMATION,
+          AuditIssueConfidence.CERTAIN,
+          "",
+          "",
+          AuditIssueSeverity.INFORMATION,
+          requestResponse
+      )
+  );

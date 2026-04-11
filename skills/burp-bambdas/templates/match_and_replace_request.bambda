@@ -1,0 +1,26 @@
+id: 00000000-0000-0000-0000-000000000000
+name: TEMPLATE - Match and replace request
+function: MATCH_AND_REPLACE_REQUEST
+location: PROXY_HTTP_HISTORY
+source: |+
+  /**
+   * TEMPLATE: match and replace, request side.
+   * Return an HttpRequest. Return the original to pass through unchanged.
+   * Returning null DROPS the request - almost never what you want.
+   *
+   * NOTE: in this context `utilities` is a bare field, NOT a method.
+   *
+   * @author YOUR NAME
+   **/
+
+  var req = requestResponse.request();
+
+  // Only act on in-scope requests.
+  if (!req.isInScope()) {
+      return req;
+  }
+
+  // Example: sign the request body with SHA-256 and add a Content-Sha256 header.
+  var digest = utilities.cryptoUtils().generateDigest(req.body(), DigestAlgorithm.SHA_256);
+  var hex = HexFormat.of().formatHex(digest.getBytes());
+  return req.withHeader("Content-Sha256", hex);

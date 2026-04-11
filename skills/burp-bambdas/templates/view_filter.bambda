@@ -1,0 +1,57 @@
+id: 00000000-0000-0000-0000-000000000000
+name: TEMPLATE - View filter
+function: VIEW_FILTER
+location: PROXY_HTTP_HISTORY
+source: |+
+  /**
+   * TEMPLATE: Proxy HTTP history view filter.
+   * Return true to show the row, false to hide it.
+   *
+   * NOTE: in this context `utilities` and `logging` are bare fields, NOT methods.
+   *
+   * @author YOUR NAME
+   **/
+
+  // === CONFIG ===
+  final boolean SHOW_OUT_OF_SCOPE = false;
+  final boolean HIDE_STATIC_ASSETS = true;
+  final boolean ONLY_AUTHENTICATED = true;
+
+  // === SANITY ===
+  if (!requestResponse.hasResponse()) {
+      return false;
+  }
+
+  var req = requestResponse.request();
+  var res = requestResponse.response();
+
+  // Cheap rejections first.
+  if (!SHOW_OUT_OF_SCOPE && !req.isInScope()) {
+      return false;
+  }
+
+  if (HIDE_STATIC_ASSETS) {
+      var mt = requestResponse.mimeType();
+      if (mt == MimeType.CSS || mt == MimeType.IMAGE_JPEG || mt == MimeType.IMAGE_PNG
+          || mt == MimeType.IMAGE_GIF || mt == MimeType.IMAGE_BMP || mt == MimeType.IMAGE_TIFF
+          || mt == MimeType.FONT_WOFF || mt == MimeType.FONT_WOFF2
+          || mt == MimeType.SOUND || mt == MimeType.VIDEO
+          || mt == MimeType.IMAGE_UNKNOWN) {
+          return false;
+      }
+      var path = req.pathWithoutQuery().toLowerCase();
+      if (path.endsWith(".js") || path.endsWith(".css") || path.endsWith(".map")
+          || path.endsWith(".woff") || path.endsWith(".woff2")) {
+          return false;
+      }
+  }
+
+  if (ONLY_AUTHENTICATED) {
+      var hasAuthHeader = req.hasHeader("Authorization");
+      var hasCookie     = req.headerValue("Cookie") != null;
+      if (!hasAuthHeader && !hasCookie) {
+          return false;
+      }
+  }
+
+  return true;

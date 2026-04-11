@@ -1,0 +1,81 @@
+id: 00000000-0000-0000-0000-000000000000
+name: TEMPLATE - Active per insertion point with Collaborator
+function: SCAN_CHECK_ACTIVE_PER_INSERTION_POINT
+location: SCANNER
+source: |
+  /**
+   * TEMPLATE: active per-insertion-point check that uses Burp Collaborator
+   * for out-of-band detection (blind SSRF / blind injection / etc.).
+   *
+   * IMPORTANT: enable the "Use Collaborator" toggle in the script settings
+   * panel so that `collaboratorClient` is in scope. (You can also create one
+   * explicitly with `api().collaborator().createClient()` if you prefer.)
+   *
+   * @author YOUR NAME
+   **/
+
+  if (insertionPoint == null) {
+      return AuditResult.auditResult();
+  }
+
+  // === CONFIG ===
+  final long POLL_SLEEP_MS = 1_000;
+  final long TOTAL_TIME_MS = 8_000;   // keep short - this runs per insertion point!
+
+  // === FIRE ===
+  var sent = new java.util.HashMap<String, HttpRequestResponse>();
+
+  // Each technique is a payload TEMPLATE with $COLLABORATOR_DOMAIN substituted in.
+  var techniques = new String[]{
+      "http://$COLLABORATOR_DOMAIN/",
+      "//$COLLABORATOR_DOMAIN/",
+      "https://$COLLABORATOR_DOMAIN@evil/"
+  };
+
+  for (var template : techniques) {
+      var payload = collaboratorClient.generatePayload();
+      var rendered = template.replace("$COLLABORATOR_DOMAIN", payload.toString());
+
+      var rr = http.sendRequest(insertionPoint.buildHttpRequestWithPayload(
+          ByteArray.byteArray(rendered)
+      ));
+      sent.put(payload.id().toString(), rr);
+  }
+
+  // === POLL ===
+  var issues = new java.util.ArrayList<AuditIssue>();
+  try {
+      long start = System.currentTimeMillis();
+      while (System.currentTimeMillis() - start < TOTAL_TIME_MS) {
+          var interactions = collaboratorClient.getAllInteractions();
+          for (var i : interactions) {
+              var rr = sent.get(i.id().toString());
+              if (rr == null) continue;
+
+              issues.add(AuditIssue.auditIssue(
+                  "Out-of-band interaction (" + i.type() + ") from parameter " + insertionPoint.name(),
+                  "<p>Burp Collaborator received a <code>" + i.type() + "</code> interaction from "
+                      + "<code>" + api().utilities().htmlUtils().encode(i.clientIp().getHostAddress()) + "</code> "
+                      + "after injecting a payload into parameter <code>"
+                      + api().utilities().htmlUtils().encode(insertionPoint.name())
+                      + "</code>.</p>",
+                  "<p>Validate and sanitize this input. Restrict outbound network access from the application.</p>",
+                  rr.request().url(),
+                  AuditIssueSeverity.HIGH,
+                  AuditIssueConfidence.FIRM,
+                  "",
+                  "",
+                  AuditIssueSeverity.HIGH,
+                  rr
+              ));
+          }
+          if (!issues.isEmpty()) break;
+          java.util.concurrent.TimeUnit.MILLISECONDS.sleep(POLL_SLEEP_MS);
+      }
+  } catch (InterruptedException ignored) {
+      Thread.currentThread().interrupt();
+  }
+
+  return issues.isEmpty()
+      ? AuditResult.auditResult()
+      : AuditResult.auditResult(issues.toArray(new AuditIssue[0]));

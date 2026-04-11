@@ -1,0 +1,29 @@
+id: 00000000-0000-0000-0000-000000000000
+name: TEMPLATE - Match and replace response
+function: MATCH_AND_REPLACE_RESPONSE
+location: PROXY_HTTP_HISTORY
+source: |+
+  /**
+   * TEMPLATE: match and replace, response side.
+   * Return an HttpResponse. Return the original to pass through unchanged.
+   *
+   * @author YOUR NAME
+   **/
+
+  var res = requestResponse.response();
+  if (res == null) {
+      return null;
+  }
+
+  if (!requestResponse.request().isInScope()) {
+      return res;
+  }
+
+  // Example: strip browser security headers to test how the front-end behaves
+  // when the server stops setting them. Useful for finding clickjacking and
+  // mixed-context XSS sinks that are masked by CSP in production.
+  return res
+      .withRemovedHeader("Content-Security-Policy")
+      .withRemovedHeader("Content-Security-Policy-Report-Only")
+      .withRemovedHeader("X-Frame-Options")
+      .withRemovedHeader("X-XSS-Protection");

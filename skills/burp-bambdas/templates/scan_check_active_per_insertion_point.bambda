@@ -1,0 +1,72 @@
+id: 00000000-0000-0000-0000-000000000000
+name: TEMPLATE - Active per insertion point
+function: SCAN_CHECK_ACTIVE_PER_INSERTION_POINT
+location: SCANNER
+source: |
+  /**
+   * TEMPLATE: active scan check, runs once per insertion point.
+   * Burp identifies parameters/headers/body fields and runs this check
+   * for each one. Use insertionPoint.buildHttpRequestWithPayload(...)
+   * to inject - never splice payloads manually.
+   *
+   * @author YOUR NAME
+   **/
+
+  if (insertionPoint == null) {
+      return AuditResult.auditResult();
+  }
+
+  // === CONFIG ===
+  // Optional: skip insertion points where this check makes no sense.
+  // For example, skip cookies for an SSTI check.
+  if (insertionPoint.type() == AuditInsertionPointType.PARAM_COOKIE) {
+      return AuditResult.auditResult();
+  }
+
+  record Probe(String engine, String[] payloads, String expectRegex) {}
+
+  var probes = java.util.List.of(
+      new Probe("Jinja/Twig",
+                new String[]{"{{7*7}}", "}} {{7*7}} {{", "#{7*7}#"},
+                "\\b49\\b"),
+      new Probe("Velocity/Thymeleaf/Freemarker",
+                new String[]{"${7*7}", "}}${7*7}{{"},
+                "\\b49\\b"),
+      new Probe("Go template",
+                new String[]{"{{print 7*7}}", "}} {{print 7*7}} {{"},
+                "\\b49\\b")
+  );
+
+  for (var probe : probes) {
+      for (var payload : probe.payloads()) {
+          var rr = http.sendRequest(insertionPoint.buildHttpRequestWithPayload(
+              ByteArray.byteArray(payload)
+          ));
+          if (!rr.hasResponse()) continue;
+
+          var body = rr.response().bodyToString();
+          // Match the expected output AND ensure it isn't just the literal payload reflected.
+          if (body.matches("(?s).*" + probe.expectRegex() + ".*") && !body.contains(payload)) {
+              return AuditResult.auditResult(
+                  AuditIssue.auditIssue(
+                      "Server-Side Template Injection (" + probe.engine() + ")",
+                      "<p>Evaluated with payload <code>"
+                          + api().utilities().htmlUtils().encode(payload)
+                          + "</code> in parameter <code>"
+                          + api().utilities().htmlUtils().encode(insertionPoint.name())
+                          + "</code>.</p>",
+                      "<p>Avoid evaluating user input as a template. Sandbox your template engine.</p>",
+                      rr.request().url(),
+                      AuditIssueSeverity.HIGH,
+                      AuditIssueConfidence.FIRM,
+                      "",
+                      "",
+                      AuditIssueSeverity.HIGH,
+                      rr
+                  )
+              );
+          }
+      }
+  }
+
+  return AuditResult.auditResult();

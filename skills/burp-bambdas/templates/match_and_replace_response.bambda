@@ -10,6 +10,15 @@ source: |+
    * @author YOUR NAME
    **/
 
+  // === BURP GLOBALS ===
+  // Required:
+  //   bambda-proxy  (boolean: "true"/"false") — master on/off switch; when false the rule
+  //                 passes the response through unmodified.
+  // Import globals.csv via Burp Globals → Options → Import variables.
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-proxy"))) {
+      return requestResponse.response();
+  }
+
   var res = requestResponse.response();
   if (res == null) {
       return null;

@@ -13,8 +13,21 @@ source: |+
    * @author YOUR NAME
    **/
 
+  // === BURP GLOBALS ===
+  // Required:
+  //   bambda-action  (boolean: "true"/"false") — master on/off switch; when false the action
+  //                  exits immediately without sending any requests.
+  // Optional:
+  //   bambda-action-max-attempts  (int as string, default "20") — retry cap.
+  // Import globals.csv via Burp Globals → Options → Import variables.
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-action"))) {
+      return;
+  }
+
   // === CONFIG ===
-  final int MAX_ATTEMPTS = 20;
+  final int MAX_ATTEMPTS = Integer.parseInt(
+      java.util.Objects.requireNonNullElse(System.getProperty("bg.bambda-action-max-attempts"), "20")
+  );
 
   var version = requestResponse.request().httpVersion().equals("HTTP/2")
       ? HttpMode.HTTP_2

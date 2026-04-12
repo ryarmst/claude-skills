@@ -14,13 +14,26 @@ source: |
    * @author YOUR NAME
    **/
 
+  // === BURP GLOBALS ===
+  // Required:
+  //   bambda-oob  (boolean: "true"/"false") — master on/off switch for OOB/blind checks.
+  // Optional:
+  //   bambda-oob-poll-ms    (int as string, default "1000") — ms between Collaborator polls.
+  //   bambda-oob-timeout-ms (int as string, default "8000") — total polling budget per insertion point.
+  // Import globals.csv via Burp Globals → Options → Import variables.
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-oob"))) {
+      return AuditResult.auditResult();
+  }
+  final long POLL_SLEEP_MS = Long.parseLong(
+      java.util.Objects.requireNonNullElse(System.getProperty("bg.bambda-oob-poll-ms"), "1000")
+  );
+  final long TOTAL_TIME_MS = Long.parseLong(
+      java.util.Objects.requireNonNullElse(System.getProperty("bg.bambda-oob-timeout-ms"), "8000")
+  );
+
   if (insertionPoint == null) {
       return AuditResult.auditResult();
   }
-
-  // === CONFIG ===
-  final long POLL_SLEEP_MS = 1_000;
-  final long TOTAL_TIME_MS = 8_000;   // keep short - this runs per insertion point!
 
   // === FIRE ===
   var sent = new java.util.HashMap<String, HttpRequestResponse>();

@@ -138,7 +138,7 @@ If you're unsure for a given function type, the safest universal pattern is: in 
 
 4. **Duplicate issue suppression.** Burp deduplicates on issue title + URL by default. If your check legitimately wants to report the same title for multiple findings, vary the title (e.g., include the affected parameter name).
 
-5. **HTML in issue detail/background fields.** Burp renders these as HTML. Always run untrusted text (payloads, response snippets, parameter values) through `api().utilities().htmlUtils().encode(...)` before concatenation.
+5. **HTML in issue detail/background fields.** Burp renders these as HTML. Always run untrusted text (payloads, response snippets, parameter values) through `api().utilities().htmlUtils().encode(...)` before concatenation. **`<table>` is not supported** — Burp's renderer does not recognise table tags and displays them as raw text. Use `<ul>`/`<li>` with inline labels to present tabular data instead.
 
 6. **Thread safety.** Burp may run multiple instances of your check in parallel for different requests. Do **not** use script-level mutable static state for cross-invocation memory — it isn't shared and isn't safe. For genuine cross-invocation persistence, see the separate `burp-bambda-persistence` skill.
 
@@ -148,7 +148,78 @@ If you're unsure for a given function type, the safest universal pattern is: in 
 
 ---
 
-## 5. Workflow
+## 5. Burp Globals — execution gates and configurable variables
+
+Every Bambda **must** use the **[Burp Globals](https://github.com/ryarmst/Burp-Globals)** extension for:
+
+1. **Execution gate** — a boolean global that turns the entire script on/off without removing it from Burp.
+2. **Configurable variables** — any value the user might want to change (thresholds, target paths, header names, regex patterns, etc.) should be a global rather than a hard-coded Java constant.
+
+Variables are set in the Burp Globals tab and read in Bambda code with:
+
+```java
+System.getProperty("bg.<variable-name>")   // always returns String or null
+```
+
+### 5.1 The `// === BURP GLOBALS ===` block
+
+Every Bambda source begins with this block, immediately after the Javadoc comment. It must:
+
+- List **required** globals (the gate) and any **optional** ones, with their type and purpose.
+- Read the gate and return the appropriate no-op value if it is not `"true"`.
+- Read any configurable globals into local `final` variables that are used below.
+
+```java
+// === BURP GLOBALS ===
+// Required:
+//   bambda-injection  (boolean: "true"/"false") — master on/off switch for injection checks
+// Optional:
+//   bambda-injection-max-probes  (int as string, default 5) — cap on probes per insertion point
+if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-injection"))) {
+    return AuditResult.auditResult();   // or false / "" / return; / original request — match function return type
+}
+final int MAX_PROBES = Integer.parseInt(
+    java.util.Objects.requireNonNullElse(System.getProperty("bg.bambda-injection-max-probes"), "5")
+);
+```
+
+### 5.2 Execution gate — choosing the right category global
+
+Use the closest category. If none fits, add a new one to `templates/globals.csv` and document it in `README.md`.
+
+| Global | Default | Used for |
+|--------|---------|----------|
+| `bambda-injection` | `false` | Active per-insertion-point injection checks (SQLi, SSTI, XSS, command injection) |
+| `bambda-fuzzing` | `false` | Active per-insertion-point brute-force / enumeration / wordlist checks |
+| `bambda-oob` | `false` | Active OOB/blind checks via Burp Collaborator |
+| `bambda-active` | `false` | Active per-request checks (CORS, method probing, header injection) |
+| `bambda-recon` | `false` | Active per-host recon probes (well-known paths, exposed metadata) |
+| `bambda-passive` | `false` | Passive checks (missing headers, info disclosure, JWT detection) |
+| `bambda-filter` | `false` | Proxy HTTP history view filters |
+| `bambda-column` | `false` | Custom table columns |
+| `bambda-action` | `false` | Repeater / Intruder custom actions |
+| `bambda-proxy` | `false` | Proxy match-and-replace rules |
+
+### 5.3 No-op return values by function type
+
+| Function type | Gate return when disabled |
+|---|---|
+| Any `SCAN_CHECK_*` | `return AuditResult.auditResult();` |
+| `VIEW_FILTER` | `return false;` |
+| `CUSTOM_COLUMN` | `return "";` |
+| `CUSTOM_ACTION` | `return;` |
+| `MATCH_AND_REPLACE_REQUEST` | `return requestResponse.request();` |
+| `MATCH_AND_REPLACE_RESPONSE` | `return requestResponse.response();` |
+
+### 5.4 globals.csv
+
+`templates/globals.csv` is the canonical list of all gate and configurable globals for the set of Bambdas in this folder. Format: `name,value,regex` — no header row. The user imports it via **Burp Globals → Options → Import variables**.
+
+When writing a new Bambda, add any new globals it introduces to this file. When delivering a Bambda with script-specific optional globals (e.g., `bambda-cors-test-origin`), document them in the `// === BURP GLOBALS ===` block and list them in `globals.csv`.
+
+---
+
+## 6. Workflow
 
 When the user asks for a Bambda:
 
@@ -159,9 +230,18 @@ When the user asks for a Bambda:
    - Always-useful API surface → `references/montoya_api_cheatsheet.md` (consult as needed)
    - Collaborator → `references/collaborator.md`
 3. **Pick a template** from `templates/` that matches the function type. Adapt it. Don't write from scratch.
-4. **Generate a fresh UUID** if producing a full `.bambda` file (`java.util.UUID.randomUUID()` or just any random UUIDv4 string).
-5. **Output** either the bare code body or the full `.bambda` file based on user preference. Default to a full `.bambda` file if the user said "write me a Bambda" without further qualification — they almost always want something importable.
-6. **Self-check before delivering:**
+4. **Wire up Burp Globals** (see §5):
+   - Choose the appropriate gate global from the category table in §5.2.
+   - Add the `// === BURP GLOBALS ===` block immediately after the Javadoc, before `// === CONFIG ===`.
+   - Move any user-tunable constants (thresholds, paths, header names, etc.) to globals read via `System.getProperty("bg....")` rather than hard-coded Java `final` values.
+   - List all required and optional globals in the comment block.
+   - Note any new globals the script introduces so the user knows to add them to `globals.csv`.
+5. **Generate a fresh UUID** if producing a full `.bambda` file (`java.util.UUID.randomUUID()` or just any random UUIDv4 string).
+6. **Output** either the bare code body or the full `.bambda` file based on user preference. Default to a full `.bambda` file if the user said "write me a Bambda" without further qualification — they almost always want something importable.
+7. **Self-check before delivering:**
+   - Does the script have a `// === BURP GLOBALS ===` block with a gate check as the first executable statement?
+   - Does the gate return the correct no-op value for this function type (see §5.3)?
+   - Are configurable values read from globals rather than hard-coded?
    - Does the script return the right type for its function?
    - Does it guard `hasResponse()` where needed?
    - Are HTML inserts encoded?
@@ -173,20 +253,25 @@ When the user asks for a Bambda:
 
 ---
 
-## 6. Persistence across runs
+## 7. Persistence across runs
 
-Bambdas have **no native persistence**. Every invocation gets a fresh script-level scope. If the user needs to remember state between scan-check invocations (e.g., dedupe findings across hosts in the same scan, store seen JWT signing keys, accumulate corpus data for analysis), use the **`burp-bambda-persistence`** skill. It documents two strategies:
+Bambdas have **no native persistence**. Every invocation gets a fresh script-level scope.
+
+**Simple key-value across runs:** Use Burp Globals (§5). Globals survive for the lifetime of the Burp process. An auto-update regex on a global can extract and store a value from a response automatically (e.g., capture a CSRF token, a session ID, or a bearer token). This covers most "remember this across requests" needs.
+
+**Cross-invocation analysis state** (e.g., dedupe findings across hosts in the same scan, accumulate a corpus, compare against a baseline collected earlier): use the **`burp-bambda-persistence`** skill. It documents:
 - Java `Preferences` API (built-in, no setup, fine for small key-value)
 - JDBC to a local database server (Postgres/SQLite/etc., for anything larger)
 
-Mention this option to the user proactively if their request implies cross-invocation memory ("track unique tokens across the scan", "only alert once per host", "compare current response to baseline collected earlier").
+Mention this option to the user proactively if their request implies durable state beyond what Burp Globals provides.
 
 ---
 
-## 7. Reference files in this skill
+## 8. Reference files in this skill
 
+- `README.md` — quick-start guide for the generated Bambda folder, including Burp Globals setup.
 - `references/scan_checks.md` — full reference for all 6 scan-check categories. Object scope, return types, full skeletons, worked examples for each combination of axis.
 - `references/filters_columns_actions_mr.md` — view filters, custom columns, custom actions, match-and-replace.
 - `references/montoya_api_cheatsheet.md` — the actually-working API surface, drawn from real Burp samples. Use this to look up method names instead of guessing.
 - `references/collaborator.md` — Collaborator client patterns: payload generation, the poll loop pattern, mapping interactions back to the request that caused them.
-- `templates/` — drop-in skeletons named after the `function:` constant they target.
+- `templates/` — drop-in skeletons named after the `function:` constant they target. All share a `globals.csv` file listing every gate and configurable global.

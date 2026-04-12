@@ -12,6 +12,20 @@ source: |
    * @author YOUR NAME
    **/
 
+  // === BURP GLOBALS ===
+  // Required:
+  //   bambda-injection  (boolean: "true"/"false") — master on/off switch for injection checks.
+  //                     Use bambda-fuzzing instead for brute-force / enumeration style checks.
+  // Optional:
+  //   bambda-injection-max-probes  (int as string, default "3") — max probes sent per insertion point.
+  // Import globals.csv via Burp Globals → Options → Import variables.
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-injection"))) {
+      return AuditResult.auditResult();
+  }
+  final int MAX_PROBES = Integer.parseInt(
+      java.util.Objects.requireNonNullElse(System.getProperty("bg.bambda-injection-max-probes"), "3")
+  );
+
   if (insertionPoint == null) {
       return AuditResult.auditResult();
   }
@@ -37,11 +51,14 @@ source: |
                 "\\b49\\b")
   );
 
+  int sent = 0;
   for (var probe : probes) {
       for (var payload : probe.payloads()) {
+          if (sent >= MAX_PROBES) break;
           var rr = http.sendRequest(insertionPoint.buildHttpRequestWithPayload(
               ByteArray.byteArray(payload)
           ));
+          sent++;
           if (!rr.hasResponse()) continue;
 
           var body = rr.response().bodyToString();

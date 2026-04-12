@@ -10,8 +10,20 @@ source: |
    * @author YOUR NAME
    **/
 
+  // === BURP GLOBALS ===
+  // Required:
+  //   bambda-passive  (boolean: "true"/"false") — master on/off switch for passive checks.
+  // Optional:
+  //   bambda-passive-header  (string, default "Content-Security-Policy") — header name to check.
+  // Import globals.csv via Burp Globals → Options → Import variables.
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-passive"))) {
+      return AuditResult.auditResult();
+  }
+
   // === CONFIG ===
-  final String  HEADER_TO_CHECK = "Content-Security-Policy";
+  final String  HEADER_TO_CHECK    = java.util.Objects.requireNonNullElse(
+      System.getProperty("bg.bambda-passive-header"), "Content-Security-Policy"
+  );
   final boolean ONLY_HTML_RESPONSES = true;
 
   // === SANITY ===

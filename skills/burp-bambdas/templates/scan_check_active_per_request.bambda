@@ -11,8 +11,20 @@ source: |
    * @author YOUR NAME
    **/
 
+  // === BURP GLOBALS ===
+  // Required:
+  //   bambda-active  (boolean: "true"/"false") — master on/off switch for active per-request checks.
+  // Optional:
+  //   bambda-active-test-header  (string, default "Origin") — header name used in probe.
+  // Import globals.csv via Burp Globals → Options → Import variables.
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-active"))) {
+      return AuditResult.auditResult();
+  }
+
   // === CONFIG ===
-  final String  TEST_HEADER = "Origin";
+  final String  TEST_HEADER = java.util.Objects.requireNonNullElse(
+      System.getProperty("bg.bambda-active-test-header"), "Origin"
+  );
   final boolean REQUIRE_BASE_RESPONSE = true;
 
   // === SANITY ===

@@ -12,6 +12,15 @@ source: |+
    * @author YOUR NAME
    **/
 
+  // === BURP GLOBALS ===
+  // Required:
+  //   bambda-column  (boolean: "true"/"false") — master on/off switch; when false the column
+  //                  returns an empty string so cells are blank while disabled.
+  // Import globals.csv via Burp Globals → Options → Import variables.
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-column"))) {
+      return "";
+  }
+
   if (!requestResponse.hasResponse()) {
       return "";
   }

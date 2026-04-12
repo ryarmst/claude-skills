@@ -12,8 +12,17 @@ source: |+
    * @author YOUR NAME
    **/
 
+  // === BURP GLOBALS ===
+  // Required:
+  //   bambda-filter  (boolean: "true"/"false") — master on/off switch; when false the filter
+  //                  shows all rows (pass-through) so history is unaffected while disabled.
+  // Import globals.csv via Burp Globals → Options → Import variables.
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-filter"))) {
+      return true;   // pass-through — show everything when filter is disabled
+  }
+
   // === CONFIG ===
-  final boolean SHOW_OUT_OF_SCOPE = false;
+  final boolean SHOW_OUT_OF_SCOPE  = false;
   final boolean HIDE_STATIC_ASSETS = true;
   final boolean ONLY_AUTHENTICATED = true;
 

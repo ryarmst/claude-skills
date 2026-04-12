@@ -322,3 +322,106 @@ api().logging().raiseErrorEvent("audit failed: " + e);
 ```
 
 `raiseInfoEvent` / `raiseErrorEvent` show in the Burp Dashboard event log; `logToOutput` goes to the extension output console.
+
+---
+
+## 13. Burp Globals — reading named variables
+
+The **Burp Globals** extension (`System.getProperty("bg.<name>")`) is the standard mechanism for configurable variables and execution gates in every Bambda. All globals are Strings; parse as needed.
+
+### Reading a boolean gate
+
+```java
+// Returns true only when the variable exists and equals "true" (case-insensitive).
+if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-injection"))) {
+    return AuditResult.auditResult();   // swap for false / "" / return; depending on function type
+}
+```
+
+### Reading a String value with a default
+
+```java
+final String TARGET_HEADER = java.util.Objects.requireNonNullElse(
+    System.getProperty("bg.bambda-cors-test-origin"), "https://evil.example"
+);
+```
+
+### Reading an integer with a default
+
+```java
+final int MAX_PROBES = Integer.parseInt(
+    java.util.Objects.requireNonNullElse(System.getProperty("bg.bambda-max-probes"), "5")
+);
+```
+
+### Reading a regex pattern with a default
+
+```java
+final java.util.regex.Pattern PAT = java.util.regex.Pattern.compile(
+    java.util.Objects.requireNonNullElse(System.getProperty("bg.bambda-error-pattern"), "(?i)exception|stacktrace|error")
+);
+```
+
+**Globals are never null if the variable exists but has an empty value** — they return `""`. They return `null` only when the variable is absent entirely. Always supply a default via `requireNonNullElse` or a null-check before parsing.
+
+---
+
+## 14. Ranking API — known gotchas
+
+The ranking utilities (`api().utilities().rankingUtils()`) expose machine-learning-style ranking of HTTP request/response pairs. Five bugs bite everyone on first use:
+
+### 13.1 `rank()` returns an unsorted `List` of objects — declare the type explicitly
+
+`var` cannot infer the generic return type; it resolves to `Object` at compile time, causing `cannot find symbol` errors on any subsequent method call.
+
+**Wrong:**
+```java
+var ranked = api().utilities().rankingUtils().rank(candidates, scorer);  // Object!
+```
+
+**Right:**
+```java
+java.util.List<burp.api.montoya.utilities.rank.RankedHttpRequestResponse> ranked =
+    api().utilities().rankingUtils().rank(candidates, scorer);
+```
+
+### 13.2 `burp.api.montoya.utilities.rank.*` is NOT auto-imported
+
+Burp's Bambda compiler auto-imports `burp.api.montoya.*` top-level packages only. Sub-packages are not included. Use **fully-qualified names** for both types:
+
+```java
+// Both must be fully qualified — no short names available:
+burp.api.montoya.utilities.rank.RankedHttpRequestResponse
+burp.api.montoya.utilities.rank.RankingAlgorithm
+```
+
+### 13.3 `rank()` returns an **unsorted** list — sort before use
+
+The returned list has no guaranteed order. Index 0 is not the top-ranked entry until you sort it yourself:
+
+```java
+ranked.sort((a, b) -> Integer.compare(b.rank(), a.rank()));  // descending — highest rank first
+var topEntry = ranked.get(0);
+```
+
+### 13.4 `rank()` returns `int`, not `double`
+
+`RankedHttpRequestResponse.rank()` returns an `int`. Threshold comparisons must use `int` constants; any ratio computation needs an explicit cast:
+
+```java
+// Gate on a threshold — must be int:
+if (topEntry.rank() < 50) return AuditResult.auditResult();
+
+// Ratio — requires explicit cast to avoid integer division:
+double ratio = (double) topEntry.rank() / ranked.get(ranked.size() - 1).rank();
+```
+
+### 13.5 Computing the median — use a separately sorted `int[]`
+
+Indexing the descending-sorted result list for the median produces wrong values (it's sorted the wrong way). Extract ranks into a new `int[]`, sort ascending, then take the middle element:
+
+```java
+int[] ranks = ranked.stream().mapToInt(r -> r.rank()).toArray();
+java.util.Arrays.sort(ranks);                                        // ascending
+int median = ranks[ranks.length / 2];                                // or average the two midpoints for even length
+```

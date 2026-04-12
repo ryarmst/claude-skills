@@ -10,6 +10,14 @@ source: |
    * @author YOUR NAME
    **/
 
+  // === BURP GLOBALS ===
+  // Required:
+  //   bambda-passive  (boolean: "true"/"false") — master on/off switch for passive checks.
+  // Import globals.csv via Burp Globals → Options → Import variables.
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-passive"))) {
+      return AuditResult.auditResult();
+  }
+
   if (!requestResponse.hasResponse()) {
       return AuditResult.auditResult();
   }

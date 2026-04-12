@@ -11,6 +11,14 @@ source: |
    * @author YOUR NAME
    **/
 
+  // === BURP GLOBALS ===
+  // Required:
+  //   bambda-recon  (boolean: "true"/"false") — master on/off switch for host-level recon probes.
+  // Import globals.csv via Burp Globals → Options → Import variables.
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-recon"))) {
+      return AuditResult.auditResult();
+  }
+
   // === CONFIG ===
   // Each entry: {path, mustContainSubstring, issueTitle, severity}
   record Probe(String path, String mustContain, String title, AuditIssueSeverity sev) {}

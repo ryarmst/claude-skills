@@ -39,6 +39,7 @@ claude-skills/
 | `apk-surface-map` | Map the full attack surface of a decompiled APK into a SQLite DB and markdown report |
 | `burp-bambdas` | Author any type of Burp Suite Bambda (scan checks, view filters, custom columns, custom actions, match-and-replace) |
 | `burp-bambda-persistence` | Persist state across Bambda invocations using the Java Preferences API or JDBC |
+| `burp-mcp` | Send HTTP requests and manage Burp Suite via MCP tools — correct CRLF encoding, Repeater tab creation, proxy history review, Collaborator payloads |
 | `markdown-document` | Write clear, well-structured technical documentation and READMEs |
 | `security-quiz-builder` | Generate MCQ quiz questions from security markdown topics and bundle for Microsoft Forms |
 

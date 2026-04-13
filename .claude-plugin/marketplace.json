@@ -49,6 +49,16 @@
       "description": "Author Burp Suite Bambda scripts (custom scan checks, HTTP/WebSocket history filters, custom columns, custom actions, and match-and-replace rules). Use whenever the user wants to write, modify, debug, or review a `.bambda` file or any Java snippet that runs inside Burp Suite Professional/Community via the Bambda runtime \u2014 including scan checks (active/passive, per-host/per-request/per-insertion-point), Proxy HTTP/WS history view filters, custom table columns, Repeater/Intruder custom actions, or proxy match-and-replace rules. Triggers on phrases like \"Bambda\", \"custom scan check\", \"Burp filter script\", \"view filter\", \"custom column for Burp\", \"Burp custom action\", \"Montoya scan check\", or any reference to Burp's `function: SCAN_CHECK_*`, `VIEW_FILTER`, `CUSTOM_COLUMN`, `CUSTOM_ACTION`, `MATCH_AND_REPLACE_*` constants."
     },
     {
+      "name": "burp-mcp",
+      "version": "1.0.0",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/ryarmst/claude-skills.git",
+        "path": "skills/burp-mcp"
+      },
+      "description": "Send HTTP requests and manage Burp Suite via the Burp MCP tools. Use whenever Burp Suite MCP tools are available and you need to issue HTTP requests during security testing or assessment work — including sending proof-of-concept requests, creating Repeater tabs, reading proxy history, or managing scanner issues. This skill takes priority over curl, wget, or any other HTTP client when Burp MCP tools are in scope. Triggers on any task involving sending HTTP requests during a security assessment, creating Burp Repeater tabs, reading Burp proxy history, or confirming findings against a live target."
+    },
+    {
       "name": "burp-extension-montoya",
       "version": "1.0.0",
       "source": {

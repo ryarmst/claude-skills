@@ -59,6 +59,16 @@
       "description": ">-"
     },
     {
+      "name": "burp-mcp",
+      "version": "1.0.0",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/ryarmst/claude-skills.git",
+        "path": "skills/burp-mcp"
+      },
+      "description": "Send HTTP requests and manage Burp Suite via the Burp MCP tools. Use whenever Burp Suite MCP tools are available and you need to issue HTTP requests during security testing \u2014 including sending proof-of-concept requests, creating Repeater tabs, reading proxy history, or managing scanner issues. This skill takes priority over curl, wget, or any other HTTP client when Burp MCP tools are in scope."
+    },
+    {
       "name": "markdown-document",
       "version": "1.0.0",
       "source": {

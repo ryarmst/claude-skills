@@ -259,9 +259,11 @@ Bambdas have **no native persistence**. Every invocation gets a fresh script-lev
 
 **Simple key-value across runs:** Use Burp Globals (§5). Globals survive for the lifetime of the Burp process. An auto-update regex on a global can extract and store a value from a response automatically (e.g., capture a CSRF token, a session ID, or a bearer token). This covers most "remember this across requests" needs.
 
-**Cross-invocation analysis state** (e.g., dedupe findings across hosts in the same scan, accumulate a corpus, compare against a baseline collected earlier): use the **`burp-bambda-persistence`** skill. It documents:
-- Java `Preferences` API (built-in, no setup, fine for small key-value)
-- JDBC to a local database server (Postgres/SQLite/etc., for anything larger)
+**Cross-invocation analysis state** (e.g., dedupe findings across hosts in the same scan, accumulate a corpus, compare against a baseline collected earlier): use the **`burp-bambda-persistence`** skill. It documents three strategies (best first):
+
+1. **BurpDB extension** (preferred when available) — opens via `DriverManager.getConnection(System.getProperty("burp.db.url"))`. No driver JAR needed. Pre-provisioned tables: `kv`, `findings`, `logs`. Use `logs` for troubleshooting (`created_at = strftime('%s','now')`, `reporter` = Bambda name, `details` = short message).
+2. **Java `Preferences` API** — built-in, no setup, fine for small key-value (< ~1MB).
+3. **JDBC to a self-managed DB** — Postgres/SQLite/etc., for anything large, structured, or shared with external tools. Requires adding the driver JAR to Burp's classpath.
 
 Mention this option to the user proactively if their request implies durable state beyond what Burp Globals provides.
 

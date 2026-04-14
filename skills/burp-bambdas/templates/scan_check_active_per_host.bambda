@@ -2,6 +2,8 @@ id: 00000000-0000-0000-0000-000000000000
 name: TEMPLATE - Active per host
 function: SCAN_CHECK_ACTIVE_PER_HOST
 location: SCANNER
+burpglobal:
+  bambda-recon: false               # master on/off; set true to enable (bool)
 source: |
   /**
    * TEMPLATE: active scan check, runs once per host.
@@ -11,11 +13,8 @@ source: |
    * @author YOUR NAME
    **/
 
-  // === BURP GLOBALS ===
-  // Required:
-  //   bambda-recon  (boolean: "true"/"false") — master on/off switch for host-level recon probes.
-  // Import globals.csv via Burp Globals → Options → Import variables.
   if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-recon"))) {
+      api().logging().logToOutput("[TEMPLATE] disabled — set bg.bambda-recon=true to enable");
       return AuditResult.auditResult();
   }
 

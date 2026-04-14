@@ -2,6 +2,8 @@ id: 00000000-0000-0000-0000-000000000000
 name: TEMPLATE - Passive per insertion point
 function: SCAN_CHECK_PASSIVE_PER_INSERTION_POINT
 location: SCANNER
+burpglobal:
+  bambda-passive: false             # master on/off; set true to enable (bool)
 source: |
   /**
    * TEMPLATE: passive scan check, runs once per insertion point.
@@ -11,11 +13,8 @@ source: |
    * @author YOUR NAME
    **/
 
-  // === BURP GLOBALS ===
-  // Required:
-  //   bambda-passive  (boolean: "true"/"false") — master on/off switch for passive checks.
-  // Import globals.csv via Burp Globals → Options → Import variables.
   if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-passive"))) {
+      api().logging().logToOutput("[TEMPLATE] disabled — set bg.bambda-passive=true to enable");
       return AuditResult.auditResult();
   }
 

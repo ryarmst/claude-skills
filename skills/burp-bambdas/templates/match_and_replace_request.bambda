@@ -2,6 +2,8 @@ id: 00000000-0000-0000-0000-000000000000
 name: TEMPLATE - Match and replace request
 function: MATCH_AND_REPLACE_REQUEST
 location: PROXY_HTTP_HISTORY
+burpglobal:
+  bambda-proxy: false               # master on/off; set true to enable (bool)
 source: |+
   /**
    * TEMPLATE: match and replace, request side.
@@ -13,11 +15,6 @@ source: |+
    * @author YOUR NAME
    **/
 
-  // === BURP GLOBALS ===
-  // Required:
-  //   bambda-proxy  (boolean: "true"/"false") — master on/off switch; when false the rule
-  //                 passes the request through unmodified.
-  // Import globals.csv via Burp Globals → Options → Import variables.
   if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-proxy"))) {
       return requestResponse.request();
   }

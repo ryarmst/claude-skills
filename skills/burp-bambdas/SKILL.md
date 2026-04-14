@@ -67,6 +67,9 @@ id: <UUIDv4>
 name: <Human readable name>
 function: <ONE OF THE CONSTANTS ABOVE>
 location: <SCANNER | PROXY_HTTP_HISTORY | PROXY_WS_HISTORY | REPEATER | INTRUDER | LOGGER | SITE_MAP>
+burpglobal:
+  <gate-global>: false  # master on/off; set true to enable (bool)
+  <optional-global>: <default>  # brief purpose (type)
 source: |
   /**
    * <One-line purpose>
@@ -161,22 +164,29 @@ Variables are set in the Burp Globals tab and read in Bambda code with:
 System.getProperty("bg.<variable-name>")   // always returns String or null
 ```
 
-### 5.1 The `// === BURP GLOBALS ===` block
+### 5.1 Declaring globals in the YAML header
 
-Every Bambda source begins with this block, immediately after the Javadoc comment. It must:
+All Burp Globals used by a Bambda are declared in a `burpglobal:` block in the `.bambda` file header — **not** as Java comments inside `source:`. This keeps the manifest separate from the code and makes it trivially inspectable without parsing Java.
 
-- List **required** globals (the gate) and any **optional** ones, with their type and purpose.
-- Read the gate and return the appropriate no-op value if it is not `"true"`.
-- Read any configurable globals into local `final` variables that are used below.
+Each entry is one line: the variable name (without the `bg.` prefix), its default value, and a `#` comment with a one-phrase description and type hint:
+
+```yaml
+burpglobal:
+  bambda-injection: false           # master on/off; set true to enable (bool)
+  bambda-injection-max-probes: 5    # cap on probes per insertion point (int)
+```
+
+Rules:
+- List the gate global **first**.
+- The value shown is the default baked into the Java code (or `false`/`""` for required fields the user must set).
+- Keep comments to one phrase — the Java code is the authoritative spec for behaviour.
+
+Inside `source:`, the gate check and `System.getProperty()` calls are still required — they are functional code. Only the **documentation** comment block moves to the YAML header. The gate check must log when it fires so silent non-execution is diagnosable:
 
 ```java
-// === BURP GLOBALS ===
-// Required:
-//   bambda-injection  (boolean: "true"/"false") — master on/off switch for injection checks
-// Optional:
-//   bambda-injection-max-probes  (int as string, default 5) — cap on probes per insertion point
 if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-injection"))) {
-    return AuditResult.auditResult();   // or false / "" / return; / original request — match function return type
+    api().logging().logToOutput("[MyCheck] disabled — set bg.bambda-injection=true to enable");
+    return AuditResult.auditResult();   // swap for false / "" / return; — match function return type
 }
 final int MAX_PROBES = Integer.parseInt(
     java.util.Objects.requireNonNullElse(System.getProperty("bg.bambda-injection-max-probes"), "5")
@@ -215,7 +225,7 @@ Use the closest category. If none fits, add a new one to `templates/globals.csv`
 
 `templates/globals.csv` is the canonical list of all gate and configurable globals for the set of Bambdas in this folder. Format: `name,value,regex` — no header row. The user imports it via **Burp Globals → Options → Import variables**.
 
-When writing a new Bambda, add any new globals it introduces to this file. When delivering a Bambda with script-specific optional globals (e.g., `bambda-cors-test-origin`), document them in the `// === BURP GLOBALS ===` block and list them in `globals.csv`.
+When writing a new Bambda, add any new globals it introduces to this file. The `burpglobal:` YAML header in the `.bambda` file is the human-readable manifest; `globals.csv` is the machine-importable counterpart.
 
 ---
 
@@ -232,15 +242,15 @@ When the user asks for a Bambda:
 3. **Pick a template** from `templates/` that matches the function type. Adapt it. Don't write from scratch.
 4. **Wire up Burp Globals** (see §5):
    - Choose the appropriate gate global from the category table in §5.2.
-   - Add the `// === BURP GLOBALS ===` block immediately after the Javadoc, before `// === CONFIG ===`.
+   - Add a `burpglobal:` block to the YAML header listing the gate global first, then any optional globals with their defaults and a `#` description.
    - Move any user-tunable constants (thresholds, paths, header names, etc.) to globals read via `System.getProperty("bg....")` rather than hard-coded Java `final` values.
-   - List all required and optional globals in the comment block.
-   - Note any new globals the script introduces so the user knows to add them to `globals.csv`.
+   - In `source:`, keep the gate check and `System.getProperty()` calls — but no documentation comment block. The gate check must log when it fires.
+   - Add any new globals to `globals.csv`.
 5. **Generate a fresh UUID** if producing a full `.bambda` file (`java.util.UUID.randomUUID()` or just any random UUIDv4 string).
 6. **Output** either the bare code body or the full `.bambda` file based on user preference. Default to a full `.bambda` file if the user said "write me a Bambda" without further qualification — they almost always want something importable.
 7. **Self-check before delivering:**
-   - Does the script have a `// === BURP GLOBALS ===` block with a gate check as the first executable statement?
-   - Does the gate return the correct no-op value for this function type (see §5.3)?
+   - Does the `.bambda` file have a `burpglobal:` header block listing the gate global first, then any optional globals?
+   - Does the gate check in `source:` log when it fires, then return the correct no-op value for this function type (see §5.3)?
    - Are configurable values read from globals rather than hard-coded?
    - Does the script return the right type for its function?
    - Does it guard `hasResponse()` where needed?

@@ -2,6 +2,8 @@ id: 00000000-0000-0000-0000-000000000000
 name: TEMPLATE - Custom column
 function: CUSTOM_COLUMN
 location: PROXY_HTTP_HISTORY
+burpglobal:
+  bambda-column: false              # master on/off; set true to enable (bool)
 source: |+
   /**
    * TEMPLATE: custom column for Proxy HTTP history.
@@ -12,11 +14,6 @@ source: |+
    * @author YOUR NAME
    **/
 
-  // === BURP GLOBALS ===
-  // Required:
-  //   bambda-column  (boolean: "true"/"false") — master on/off switch; when false the column
-  //                  returns an empty string so cells are blank while disabled.
-  // Import globals.csv via Burp Globals → Options → Import variables.
   if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-column"))) {
       return "";
   }

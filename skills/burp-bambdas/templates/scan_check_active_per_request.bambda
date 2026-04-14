@@ -2,6 +2,9 @@ id: 00000000-0000-0000-0000-000000000000
 name: TEMPLATE - Active per request
 function: SCAN_CHECK_ACTIVE_PER_REQUEST
 location: SCANNER
+burpglobal:
+  bambda-active: false              # master on/off; set true to enable (bool)
+  bambda-active-test-header: Origin # header name used in probe (string)
 source: |
   /**
    * TEMPLATE: active scan check, runs once per audited base request.
@@ -11,13 +14,8 @@ source: |
    * @author YOUR NAME
    **/
 
-  // === BURP GLOBALS ===
-  // Required:
-  //   bambda-active  (boolean: "true"/"false") — master on/off switch for active per-request checks.
-  // Optional:
-  //   bambda-active-test-header  (string, default "Origin") — header name used in probe.
-  // Import globals.csv via Burp Globals → Options → Import variables.
   if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-active"))) {
+      api().logging().logToOutput("[TEMPLATE] disabled — set bg.bambda-active=true to enable");
       return AuditResult.auditResult();
   }
 

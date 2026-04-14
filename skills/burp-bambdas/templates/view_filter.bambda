@@ -2,6 +2,8 @@ id: 00000000-0000-0000-0000-000000000000
 name: TEMPLATE - View filter
 function: VIEW_FILTER
 location: PROXY_HTTP_HISTORY
+burpglobal:
+  bambda-filter: false              # master on/off; false = pass-through (show all) (bool)
 source: |+
   /**
    * TEMPLATE: Proxy HTTP history view filter.
@@ -12,11 +14,6 @@ source: |+
    * @author YOUR NAME
    **/
 
-  // === BURP GLOBALS ===
-  // Required:
-  //   bambda-filter  (boolean: "true"/"false") — master on/off switch; when false the filter
-  //                  shows all rows (pass-through) so history is unaffected while disabled.
-  // Import globals.csv via Burp Globals → Options → Import variables.
   if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-filter"))) {
       return true;   // pass-through — show everything when filter is disabled
   }

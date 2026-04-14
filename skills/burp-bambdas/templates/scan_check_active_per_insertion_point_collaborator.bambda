@@ -19,7 +19,6 @@ source: |
    **/
 
   if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-oob"))) {
-      api().logging().logToOutput("[TEMPLATE] disabled — set bg.bambda-oob=true to enable");
       return AuditResult.auditResult();
   }
   final long POLL_SLEEP_MS = Long.parseLong(

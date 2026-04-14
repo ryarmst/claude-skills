@@ -69,6 +69,16 @@
       "description": "Send HTTP requests and manage Burp Suite via the Burp MCP tools. Use whenever Burp Suite MCP tools are available and you need to issue HTTP requests during security testing \u2014 including sending proof-of-concept requests, creating Repeater tabs, reading proxy history, or managing scanner issues. This skill takes priority over curl, wget, or any other HTTP client when Burp MCP tools are in scope."
     },
     {
+      "name": "burp-repeater-actions",
+      "version": "1.0.0",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/ryarmst/claude-skills.git",
+        "path": "skills/burp-repeater-actions"
+      },
+      "description": "Author Burp Suite Repeater custom actions (CUSTOM_ACTION Bambdas). Use when the user wants to write, modify, debug, or review a script that runs as a button in Burp Repeater \u2014 including request signing, race-condition probes, batch sends, response decoding, token extraction, CSRF manipulation, automated retries, shell invocation, and AI-assisted analysis. Triggers on phrases like \"Repeater action\", \"custom action\", \"Repeater button\", \"CUSTOM_ACTION\", or any request for a script that runs manually inside Repeater against the current request/response pair."
+    },
+    {
       "name": "markdown-document",
       "version": "1.0.0",
       "source": {

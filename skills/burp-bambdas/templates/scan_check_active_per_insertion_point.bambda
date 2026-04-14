@@ -16,7 +16,6 @@ source: |
    **/
 
   if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-injection"))) {
-      api().logging().logToOutput("[TEMPLATE] disabled — set bg.bambda-injection=true to enable");
       return AuditResult.auditResult();
   }
   final int MAX_PROBES = Integer.parseInt(

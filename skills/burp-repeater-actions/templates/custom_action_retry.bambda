@@ -1,0 +1,48 @@
+id: 00000000-0000-0000-0000-000000000000
+name: TEMPLATE - Retry until status changes
+function: CUSTOM_ACTION
+location: REPEATER
+burpglobal:
+  bambda-action: false                    # master on/off; set true to enable (bool)
+  bambda-action-max-attempts: 20          # retry cap (int)
+source: |
+  /**
+   * TEMPLATE: retry the current request until a different status code appears.
+   * Useful for race-condition probing and flaky endpoint investigation.
+   *
+   * @author YOUR NAME
+   **/
+
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-action"))) {
+      logging().logToOutput("[RetryAction] disabled — set bg.bambda-action=true to enable");
+      return;
+  }
+
+  final int MAX_ATTEMPTS = Integer.parseInt(
+      java.util.Objects.requireNonNullElse(System.getProperty("bg.bambda-action-max-attempts"), "20")
+  );
+
+  if (!requestResponse.hasResponse()) {
+      logging().logToOutput("no base response — send the request first");
+      return;
+  }
+
+  var version = requestResponse.request().httpVersion().equals("HTTP/2")
+      ? HttpMode.HTTP_2 : HttpMode.HTTP_1;
+  var boring = requestResponse.response().statusCode();
+
+  for (int i = 0; i < MAX_ATTEMPTS; i++) {
+      var attack = api().http().sendRequest(requestResponse.request(), version);
+      if (!attack.hasResponse()) {
+          logging().logToOutput("attempt " + i + ": no response");
+          continue;
+      }
+      var status = attack.response().statusCode();
+      logging().logToOutput("attempt " + i + " -> " + status);
+      if (status != boring) {
+          httpEditor.responsePane().set(attack.response().toByteArray());
+          logging().logToOutput("status changed on attempt " + i + " (" + boring + " -> " + status + ")");
+          return;
+      }
+  }
+  logging().logToOutput("no status change after " + MAX_ATTEMPTS + " attempts");

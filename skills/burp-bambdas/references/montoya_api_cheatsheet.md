@@ -16,8 +16,7 @@ The biggest pitfall. The same Montoya API is reached by different identifiers de
 | `utilities` (bare field) | `VIEW_FILTER`, `CUSTOM_COLUMN`, `MATCH_AND_REPLACE_*` | `Utilities` | `utilities.jsonUtils().readString(body, "id")` |
 | `utilities()` (method) | `CUSTOM_ACTION`, `SCAN_CHECK_*` (works in some Burp versions) | `Utilities` | `utilities().randomUtils().randomString(8)` |
 | `http` (bare field) | `SCAN_CHECK_*` | `Http` | `http.sendRequest(req)` |
-| `logging` (bare field) | `VIEW_FILTER`, `CUSTOM_COLUMN`, `MATCH_AND_REPLACE_*` | `Logging` | `logging.logToOutput("hi")` |
-| `logging()` (method) | `CUSTOM_ACTION` | `Logging` | `logging().logToOutput("hi")` |
+| `logging()` (method) | `CUSTOM_ACTION` only | `Logging` | `logging().logToOutput("hi")` |
 | `requestResponse` | All function types | varies (see below) | `requestResponse.request()` |
 | `insertionPoint` | `SCAN_CHECK_*_PER_INSERTION_POINT` only | `AuditInsertionPoint` | |
 | `collaboratorClient` | Scan checks with "Use Collaborator" enabled | `CollaboratorClient` | |
@@ -25,9 +24,9 @@ The biggest pitfall. The same Montoya API is reached by different identifiers de
 
 **Safe universal pattern when in doubt:**
 
-- In a scan check: prefer `api().utilities()`, use bare `http`.
-- In a filter/column/M&R: use bare `utilities` and `logging`.
-- In a custom action: use `api().http()`, `utilities()`, `logging()`, and the editor handles.
+- In a scan check: prefer `api().utilities()`, use bare `http`. **No logging available.**
+- In a filter/column/M&R: use bare `utilities`. **No logging available — Bambdas have no logging interface.**
+- In a custom action: use `api().http()`, `utilities()`, `logging()`, and the editor handles. Logging IS available here.
 
 ---
 
@@ -312,16 +311,17 @@ Use this for time-based blind SQLi / blind command injection / SSRF detection �
 
 ## 12. Logging
 
+**Only `CUSTOM_ACTION` (Repeater/Intruder) Bambdas have a logging interface.** All other Bambda types — scan checks, view filters, custom columns, match-and-replace — have no logging object. Referencing `logging` or `api().logging()` in those contexts will fail at compile time or runtime.
+
 ```java
-logging.logToOutput("info: " + value);               // filter/column/M&R
-logging().logToOutput("info: " + value);             // custom action
-api().logging().logToOutput("info: " + value);       // scan check (or just use System.out?)
-api().logging().logToError("error: " + e);
-api().logging().raiseInfoEvent("audit started");
-api().logging().raiseErrorEvent("audit failed: " + e);
+// CUSTOM_ACTION only:
+logging().logToOutput("info: " + value);
+logging().logToError("error: " + e.getMessage());
 ```
 
-`raiseInfoEvent` / `raiseErrorEvent` show in the Burp Dashboard event log; `logToOutput` goes to the extension output console.
+Output goes to the **Output** panel in the Custom actions side panel in Repeater.
+
+> **Scan checks, filters, columns, M&R:** no logging interface. For quick debugging of a scan check, the gate can silently return; inspect findings in the Issues panel instead.
 
 ---
 

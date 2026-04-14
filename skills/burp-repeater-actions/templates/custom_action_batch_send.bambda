@@ -1,0 +1,45 @@
+id: 00000000-0000-0000-0000-000000000000
+name: TEMPLATE - Batch send variants in parallel
+function: CUSTOM_ACTION
+location: REPEATER
+burpglobal:
+  bambda-action: false              # master on/off; set true to enable (bool)
+source: |
+  /**
+   * TEMPLATE: send multiple variants of the current request in parallel,
+   * log each status code, and send all results to the Organizer.
+   *
+   * Customize the `variants` list to suit your test case.
+   *
+   * @author YOUR NAME
+   **/
+
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-action"))) {
+      logging().logToOutput("[BatchSend] disabled — set bg.bambda-action=true to enable");
+      return;
+  }
+
+  var base = requestResponse.request();
+
+  // === Define request variants ===
+  var variants = java.util.List.of(
+      base,
+      base.withAddedHeader("X-Forwarded-For", "127.0.0.1"),
+      base.withAddedHeader("X-Forwarded-For", "::1"),
+      base.withRemovedHeader("Cookie")
+  );
+
+  // Send in parallel.
+  var results = api().http().sendRequests(variants);
+
+  for (int i = 0; i < results.size(); i++) {
+      var rr = results.get(i);
+      if (!rr.hasResponse()) {
+          logging().logToOutput("variant " + i + ": no response");
+          continue;
+      }
+      var status = rr.response().statusCode();
+      var length = rr.response().body().length();
+      logging().logToOutput("variant " + i + " -> " + status + " (" + length + " bytes)");
+      api().organizer().sendToOrganizer(rr);
+  }

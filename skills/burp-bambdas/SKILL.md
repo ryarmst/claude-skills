@@ -1,6 +1,6 @@
 ---
 name: burp-bambdas
-description: Author Burp Suite Bambda scripts (custom scan checks, HTTP/WebSocket history filters, custom columns, custom actions, and match-and-replace rules). Use whenever the user wants to write, modify, debug, or review a `.bambda` file or any Java snippet that runs inside Burp Suite Professional/Community via the Bambda runtime — including scan checks (active/passive, per-host/per-request/per-insertion-point), Proxy HTTP/WS history view filters, custom table columns, Repeater/Intruder custom actions, or proxy match-and-replace rules. Triggers on phrases like "Bambda", "custom scan check", "Burp filter script", "view filter", "custom column for Burp", "Burp custom action", "Montoya scan check", or any reference to Burp's `function: SCAN_CHECK_*`, `VIEW_FILTER`, `CUSTOM_COLUMN`, `CUSTOM_ACTION`, `MATCH_AND_REPLACE_*` constants.
+description: Author Burp Suite Bambda scripts (custom scan checks, HTTP/WebSocket history filters, custom columns, and match-and-replace rules). Use whenever the user wants to write, modify, debug, or review a `.bambda` file or any Java snippet that runs inside Burp Suite Professional/Community via the Bambda runtime — including scan checks (active/passive, per-host/per-request/per-insertion-point), Proxy HTTP/WS history view filters, custom table columns, or proxy match-and-replace rules. For Repeater custom actions specifically, use the `burp-repeater-actions` skill instead. Triggers on phrases like "Bambda", "custom scan check", "Burp filter script", "view filter", "custom column for Burp", "Montoya scan check", or any reference to Burp's `function: SCAN_CHECK_*`, `VIEW_FILTER`, `CUSTOM_COLUMN`, `MATCH_AND_REPLACE_*` constants.
 ---
 
 # Burp Bambdas
@@ -114,9 +114,9 @@ A Bambda is a Java method body, **not** a Java file. Cursor-style prompts that t
 
 | Function type | How to access utilities | How to send HTTP | Notes |
 |---|---|---|---|
-| `SCAN_CHECK_*` | `api().utilities()` (sometimes `utilities()` works depending on Burp version — prefer `api().utilities()`) | `http.sendRequest(...)` (bare `http` is in scope) | `api()` returns the full `MontoyaApi` |
-| `VIEW_FILTER`, `CUSTOM_COLUMN`, `MATCH_AND_REPLACE_*` | `utilities` (no parens — it's a field, not a method) | n/a (filters/columns are passive) | |
-| `CUSTOM_ACTION` | `utilities()` and `logging()` and `api().http()` for sending | `api().http().sendRequest(...)` | `httpEditor`/`wsEditor` is in scope to mutate the active editor pane |
+| `SCAN_CHECK_*` | `api().utilities()` (sometimes `utilities()` works depending on Burp version — prefer `api().utilities()`) | `http.sendRequest(...)` (bare `http` is in scope) | **No logging interface.** Do not use `api().logging()` or `logging`. |
+| `VIEW_FILTER`, `CUSTOM_COLUMN`, `MATCH_AND_REPLACE_*` | `utilities` (no parens — it's a field, not a method) | n/a (filters/columns are passive) | **No logging interface.** Do not use `logging` or `api().logging()`. |
+| `CUSTOM_ACTION` | `utilities()` and `logging()` and `api().http()` for sending | `api().http().sendRequest(...)` | `logging()` **IS available**. `httpEditor`/`wsEditor` is in scope to mutate the active editor pane. |
 
 If you're unsure for a given function type, the safest universal pattern is: in scan checks use `api().utilities()`; in everything else use `utilities` as a bare identifier. See `references/montoya_api_cheatsheet.md` for the full surface.
 
@@ -181,16 +181,24 @@ Rules:
 - The value shown is the default baked into the Java code (or `false`/`""` for required fields the user must set).
 - Keep comments to one phrase — the Java code is the authoritative spec for behaviour.
 
-Inside `source:`, the gate check and `System.getProperty()` calls are still required — they are functional code. Only the **documentation** comment block moves to the YAML header. The gate check must log when it fires so silent non-execution is diagnosable:
+Inside `source:`, the gate check and `System.getProperty()` calls are still required — they are functional code. Only the **documentation** comment block moves to the YAML header.
+
+**Important: most Bambda types have no logging interface.** Only `CUSTOM_ACTION` supports `logging()`. For scan checks, filters, columns, and M&R rules, the gate check silently returns — there is no logging call to add.
 
 ```java
+// Scan check gate (no logging available — just return):
 if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-injection"))) {
-    api().logging().logToOutput("[MyCheck] disabled — set bg.bambda-injection=true to enable");
     return AuditResult.auditResult();   // swap for false / "" / return; — match function return type
 }
 final int MAX_PROBES = Integer.parseInt(
     java.util.Objects.requireNonNullElse(System.getProperty("bg.bambda-injection-max-probes"), "5")
 );
+
+// CUSTOM_ACTION gate (logging IS available):
+if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-action"))) {
+    logging().logToOutput("[MyAction] disabled — set bg.bambda-action=true to enable");
+    return;
+}
 ```
 
 ### 5.2 Execution gate — choosing the right category global
@@ -250,7 +258,8 @@ When the user asks for a Bambda:
 6. **Output** either the bare code body or the full `.bambda` file based on user preference. Default to a full `.bambda` file if the user said "write me a Bambda" without further qualification — they almost always want something importable.
 7. **Self-check before delivering:**
    - Does the `.bambda` file have a `burpglobal:` header block listing the gate global first, then any optional globals?
-   - Does the gate check in `source:` log when it fires, then return the correct no-op value for this function type (see §5.3)?
+   - Does the gate check in `source:` return the correct no-op value for this function type (see §5.3)? (Only `CUSTOM_ACTION` may include a `logging()` call in the gate — all other types have no logging interface.)
+   - Does the script use `logging` or `api().logging()` outside a `CUSTOM_ACTION`? If yes, remove it — Bambdas have no logging interface except in Repeater custom actions.
    - Are configurable values read from globals rather than hard-coded?
    - Does the script return the right type for its function?
    - Does it guard `hasResponse()` where needed?

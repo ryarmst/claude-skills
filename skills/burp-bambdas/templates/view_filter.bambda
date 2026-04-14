@@ -9,7 +9,8 @@ source: |+
    * TEMPLATE: Proxy HTTP history view filter.
    * Return true to show the row, false to hide it.
    *
-   * NOTE: in this context `utilities` and `logging` are bare fields, NOT methods.
+   * NOTE: in this context `utilities` is a bare field, NOT a method.
+   * NOTE: logging is NOT available in VIEW_FILTER — Bambdas have no logging interface.
    *
    * @author YOUR NAME
    **/

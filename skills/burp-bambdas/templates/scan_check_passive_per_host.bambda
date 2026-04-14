@@ -13,7 +13,6 @@ source: |
    **/
 
   if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-passive"))) {
-      api().logging().logToOutput("[TEMPLATE] disabled — set bg.bambda-passive=true to enable");
       return AuditResult.auditResult();
   }
 

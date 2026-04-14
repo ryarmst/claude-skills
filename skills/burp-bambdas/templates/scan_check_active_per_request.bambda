@@ -15,7 +15,6 @@ source: |
    **/
 
   if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-active"))) {
-      api().logging().logToOutput("[TEMPLATE] disabled — set bg.bambda-active=true to enable");
       return AuditResult.auditResult();
   }
 

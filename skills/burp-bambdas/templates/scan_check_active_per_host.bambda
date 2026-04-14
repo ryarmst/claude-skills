@@ -14,7 +14,6 @@ source: |
    **/
 
   if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-recon"))) {
-      api().logging().logToOutput("[TEMPLATE] disabled — set bg.bambda-recon=true to enable");
       return AuditResult.auditResult();
   }
 

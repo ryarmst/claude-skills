@@ -15,7 +15,8 @@ These four function types are non-scan-check Bambdas. They run in different part
 |---|---|---|
 | `requestResponse` | `ProxyHttpRequestResponse` (HTTP) or `ProxyWebSocketMessage` (WS) | The current row being filtered. |
 | `utilities` | `Utilities` | **Bare field, no parens.** Different from scan checks! |
-| `logging` | `Logging` | For `logging.logToOutput(...)` debugging. |
+
+> **No logging interface.** `VIEW_FILTER` Bambdas have no `logging` object. Do not reference `logging` or `api().logging()` — it will fail to compile. For debugging, toggle the filter off and use other Burp tools to inspect traffic.
 
 **Useful methods on the HTTP variant:**
 
@@ -71,7 +72,7 @@ return res.isStatusCodeClass(StatusCodeClass.CLASS_2XX_SUCCESS)
 **Where:** Proxy HTTP history, WS history, Logger.
 **Locations:** `PROXY_HTTP_HISTORY`, `PROXY_WS_HISTORY`, `LOGGER`.
 **Return type:** `String`. Whatever you return becomes the cell text. Empty string = empty cell.
-**Objects in scope:** same as `VIEW_FILTER`. `utilities` is a bare field.
+**Objects in scope:** same as `VIEW_FILTER`. `utilities` is a bare field. **No logging interface** — do not use `logging` or `api().logging()`.
 
 **Skeleton:**
 
@@ -158,7 +159,8 @@ Custom actions are the right place for "do something useful with the current req
 |---|---|
 | `requestResponse` | The pair the proxy is currently processing |
 | `utilities` | bare field, not method |
-| `logging` | bare field |
+
+> **No logging interface.** `MATCH_AND_REPLACE_*` Bambdas have no `logging` object. Do not reference `logging` or `api().logging()`.
 
 **Skeleton: add a signature header derived from the body**
 

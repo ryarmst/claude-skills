@@ -9,8 +9,6 @@ This skill produces drop-in Burp Suite Bambda code. A Bambda is a Java *code bod
 
 Read this whole file. Then load the reference file for the function type you're targeting. Then write code.
 
----
-
 ## 1. Step 1 — Pick the function type (mandatory)
 
 Bambdas are not interchangeable. The same code that works as a scan check is a syntax error as a view filter. Before writing anything, determine which of these the user wants:
@@ -44,30 +42,26 @@ If the user just says "write me a Bambda for X", use this decision tree, and **o
 If it's a scan check, you **must** decide three orthogonal axes. If any is unclear from context, ask the user a single consolidated question — do not guess silently for scan checks, because the wrong axis produces a working-but-wasteful or working-but-broken script (e.g., a per-insertion-point check coded as per-request will never see `insertionPoint`).
 
 1. **Active or passive?**
-   - *Passive* = inspect the existing `requestResponse` only, send no traffic. Use for missing headers, error message disclosure, info leaks, cookie attribute checks.
-   - *Active* = send additional crafted requests via `http.sendRequest(...)`. Use for SQLi, SSTI, CORS reflection, prototype pollution, command injection.
+   - *Passive* = inspect the existing `requestResponse` only, send no traffic. 
+   - *Active* = send additional crafted requests via `http.sendRequest(...)`.
 
 2. **Per host / per request / per insertion point?**
-   - *Per host* = runs once per origin during a scan. Use for host-level configuration probes (e.g., is `/.git/HEAD` exposed, does `OPTIONS *` work, TLS-level checks). `requestResponse` is the seed request for the host.
+   - *Per host* = runs once per origin during a scan. Use for host-level configuration probes (e.g., is `/.git/HEAD` exposed, does `OPTIONS *` work). `requestResponse` is the seed request for the host.
    - *Per request* = runs once per audited base request. Use when the test depends on the specific URL/method/body but does not need to mutate a single parameter. CORS reflection, missing CSP, TRACE method, server-side prototype pollution against a JSON endpoint.
    - *Per insertion point* = runs once per parameter / header / cookie / body location Burp identifies. The variable `insertionPoint` is in scope. Use when payloads must replace a specific input value: SQLi, XSS, SSTI, command injection, parameter-level SSRF.
 
 3. **Use Collaborator?** Only if testing OOB issues (blind SSRF, blind SQLi, blind XSS, email splitting, log injection that escapes to a logger that resolves URLs, etc.). Collaborator must be enabled in the script settings; the variable `collaboratorClient` is then in scope, OR you can create one explicitly with `api().collaborator().createClient()`.
 
-When you ask the user, present these as one batched multi-choice elicitation, not three rounds of questions.
-
----
-
 ## 2. The .bambda file format
 
-A `.bambda` file is YAML-with-embedded-source. Burp's GitHub samples all use this format and it's what the user will import. When the user wants a "Bambda file" (as opposed to "just the code body"), produce the full file:
+A `.bambda` file is YAML-with-embedded-source. Burp's GitHub samples use this format and it's what the user will import. When the user wants a "Bambda file" (as opposed to "just the code body"), produce the full file:
 
 ```yaml
 id: <UUIDv4>
 name: <Human readable name>
 function: <ONE OF THE CONSTANTS ABOVE>
 location: <SCANNER | PROXY_HTTP_HISTORY | PROXY_WS_HISTORY | REPEATER | INTRUDER | LOGGER | SITE_MAP>
-burpglobal:
+burpglobal: # This is custom to our Bambdas
   <gate-global>: false  # master on/off; set true to enable (bool)
   <optional-global>: <default>  # brief purpose (type)
 source: |
@@ -88,29 +82,25 @@ Notes:
 - `location` for `MATCH_AND_REPLACE_*` is `PROXY_HTTP_HISTORY`.
 - Indent the source body with 2 spaces under `source: |`. Burp tolerates `|+` (preserve trailing newlines) — either is fine.
 
-If the user only wants the code body (e.g., they're pasting into Burp's editor directly), skip the YAML wrapper and emit just the Java.
-
----
-
 ## 3. Universal rules — what is and is NOT in a Bambda
 
-A Bambda is a Java method body, **not** a Java file. Cursor-style prompts that tell you to write `import` statements or `class { }` wrappers are wrong. Real Burp samples confirm the following.
+A Bambda is a Java method body, not a Java file. Prompts that tell you to write `import` statements or `class { }` wrappers are wrong. Real Burp samples confirm the following.
 
-**NEVER write:**
+NEVER write:
 - `import` statements
 - `package` statements
 - A `class`, `interface`, or `enum` declaration wrapping the code
 - A `public static void main`
 - Code that requires loading external JARs or Maven dependencies
 
-**You CAN use:**
+You CAN use:
 - `var` and modern Java syntax (records, text blocks, lambdas, switch expressions). Real samples use Java 17+.
 - The fully-qualified Java standard library where needed: `java.util.ArrayList`, `java.util.HashMap`, `java.util.concurrent.TimeUnit`, `java.util.UUID`, `java.util.regex.Pattern`, `java.util.function.Function`, `java.time.*`, `java.nio.charset.StandardCharsets`, `java.util.HexFormat`, etc.
 - Local helper methods declared inline at the bottom of the script (Java 17 supports this in instance method bodies as anonymous local methods only via lambdas; in Bambdas you generally inline logic or use `java.util.function.Function<>` lambdas instead — see the EmailSplitting sample).
 - Threads and `Thread.sleep` / `TimeUnit.MILLISECONDS.sleep(...)`. The `EmailSplittingCollaboratorClient` sample explicitly sleeps in a poll loop. Threads are necessary for scan checks that wait on Collaborator — do not remove them.
 - All Montoya types **without imports** — Burp's Bambda compiler auto-imports the entire `burp.api.montoya.*` tree. So `HttpRequest`, `HttpResponse`, `HttpRequestResponse`, `ByteArray`, `AuditIssue`, `AuditIssueSeverity`, `AuditIssueConfidence`, `AuditResult`, `HttpParameter`, `HttpParameterType`, `MimeType`, `StatusCodeClass`, `HttpMode`, `Interaction`, `DigestAlgorithm`, `AttributeType`, etc. are all directly usable.
 
-**The entry point varies by function type** — this is a common source of bugs. Real Burp samples confirm:
+The entry point varies by function type — this is a common source of bugs. Real Burp samples confirm:
 
 | Function type | How to access utilities | How to send HTTP | Notes |
 |---|---|---|---|
@@ -120,42 +110,38 @@ A Bambda is a Java method body, **not** a Java file. Cursor-style prompts that t
 
 If you're unsure for a given function type, the safest universal pattern is: in scan checks use `api().utilities()`; in everything else use `utilities` as a bare identifier. See `references/montoya_api_cheatsheet.md` for the full surface.
 
----
-
 ## 4. Common gotchas (read these — they cause silent failures)
 
-1. **`requestResponse` may have no response.** Always guard:
+1. `requestResponse` may have no response. Always guard:
    ```java
    if (!requestResponse.hasResponse()) return AuditResult.auditResult();
    ```
    For passive checks this is a hard requirement. For active per-request checks, sometimes you still want to proceed (the active check provides its own response).
 
-2. **`insertionPoint` is only in scope for `SCAN_CHECK_*_PER_INSERTION_POINT`.** Never reference it from a per-host or per-request check — it will fail to compile. Conversely, in per-insertion-point checks, do **not** mutate `requestResponse.request()` directly to insert payloads; use:
+2. `insertionPoint` is only in scope for `SCAN_CHECK_*_PER_INSERTION_POINT`. Never reference it from a per-host or per-request check — it will fail to compile. Conversely, in per-insertion-point checks, do not mutate `requestResponse.request()` directly to insert payloads; use:
    ```java
    var attackReq = insertionPoint.buildHttpRequestWithPayload(ByteArray.byteArray(payload));
    var attackRR = http.sendRequest(attackReq);
    ```
    Burp handles encoding the payload into the right place (URL-encoded query, JSON-escaped body, header value, etc.).
 
-3. **Returning `null` vs `AuditResult.auditResult()`.** Both are accepted by Burp's scan-check runtime as "no issue". `AuditResult.auditResult()` is clearer; `return null;` appears in several official samples. Either is fine — be consistent within a script.
+3. Returning `null` vs `AuditResult.auditResult()`. Both are accepted by Burp's scan-check runtime as "no issue". `AuditResult.auditResult()` is clearer; `return null;` appears in several official samples. Either is fine — be consistent within a script.
 
-4. **Duplicate issue suppression.** Burp deduplicates on issue title + URL by default. If your check legitimately wants to report the same title for multiple findings, vary the title (e.g., include the affected parameter name).
+4. Duplicate issue suppression. Burp deduplicates on issue title + URL by default. If your check legitimately wants to report the same title for multiple findings, vary the title (e.g., include the affected parameter name).
 
-5. **HTML in issue detail/background fields.** Burp renders these as HTML. Always run untrusted text (payloads, response snippets, parameter values) through `api().utilities().htmlUtils().encode(...)` before concatenation. **`<table>` is not supported** — Burp's renderer does not recognise table tags and displays them as raw text. Use `<ul>`/`<li>` with inline labels to present tabular data instead.
+5. HTML in issue detail/background fields. Burp renders these as HTML. Always run untrusted text (payloads, response snippets, parameter values) through `api().utilities().htmlUtils().encode(...)` before concatenation. **`<table>` is not supported** — Burp's renderer does not recognise table tags and displays them as raw text. Use `<ul>`/`<li>` with inline labels to present tabular data instead.
 
-6. **Thread safety.** Burp may run multiple instances of your check in parallel for different requests. Do **not** use script-level mutable static state for cross-invocation memory — it isn't shared and isn't safe. For genuine cross-invocation persistence, see the separate `burp-bambda-persistence` skill.
+6. Thread safety. Burp may run multiple instances of your check in parallel for different requests. Do not use script-level mutable static state for cross-invocation memory — it isn't shared and isn't safe. For genuine cross-invocation persistence, see the separate `burp-bambda-persistence` skill.
 
-7. **Performance.** Burp warns that slow scripts slow down the whole scan. Bound your loops, cap retry counts, and never loop on Collaborator polling without a `TOTAL_TIME` ceiling.
+7. Performance. Burp warns that slow scripts slow down the whole scan. Bound your loops, cap retry counts, and never loop on Collaborator polling without a `TOTAL_TIME` ceiling.
 
-8. **`requestResponse` shape differs by function type.** In scan checks it's an `AuditInsertionPoint`-aware `HttpRequestResponse`. In `VIEW_FILTER` / `CUSTOM_COLUMN` it's a `ProxyHttpRequestResponse` (or the Logger equivalent) and has `.annotations()`, `.mimeType()`, `.finalResponse()` etc. that don't exist on the scan-check version. The reference files document the precise type for each context.
-
----
+8. `requestResponse` shape differs by function type. In scan checks it's an `AuditInsertionPoint`-aware `HttpRequestResponse`. In `VIEW_FILTER` / `CUSTOM_COLUMN` it's a `ProxyHttpRequestResponse` (or the Logger equivalent) and has `.annotations()`, `.mimeType()`, `.finalResponse()` etc. that don't exist on the scan-check version. The reference files document the precise type for each context.
 
 ## 5. Burp Globals — execution gates and configurable variables
 
-Every Bambda **must** use the **[Burp Globals](https://github.com/ryarmst/Burp-Globals)** extension for:
+Every Bambda must use the [Burp Globals](https://github.com/ryarmst/Burp-Globals) extension for:
 
-1. **Execution gate** — a boolean global that turns the entire script on/off without removing it from Burp.
+1. **Execution gate** — a boolean global that turns the entire script on/off without removing it from Burp. These are generally shared by multiple Bambdas and may even be triggered by some (for example, if a technology is identified, then the corresponding Bambda check should be turned on).
 2. **Configurable variables** — any value the user might want to change (thresholds, target paths, header names, regex patterns, etc.) should be a global rather than a hard-coded Java constant.
 
 Variables are set in the Burp Globals tab and read in Bambda code with:
@@ -166,7 +152,7 @@ System.getProperty("bg.<variable-name>")   // always returns String or null
 
 ### 5.1 Declaring globals in the YAML header
 
-All Burp Globals used by a Bambda are declared in a `burpglobal:` block in the `.bambda` file header — **not** as Java comments inside `source:`. This keeps the manifest separate from the code and makes it trivially inspectable without parsing Java.
+All Burp Globals used by a Bambda are declared in a `burpglobal:` block in the `.bambda` file header. This keeps the manifest separate from the code and makes it trivially inspectable without parsing Java. There should be a summary block in Java comments as well if the user-facing interface displays only the Java. 
 
 Each entry is one line: the variable name (without the `bg.` prefix), its default value, and a `#` comment with a one-phrase description and type hint:
 
@@ -228,11 +214,7 @@ Use the closest category. If none fits, add a new one to `templates/globals.csv`
 
 ### 5.4 globals.csv
 
-`templates/globals.csv` is the canonical list of all gate and configurable globals for the set of Bambdas in this folder. Format: `name,value,regex` — no header row. The user imports it via **Burp Globals → Options → Import variables**.
-
-When writing a new Bambda, add any new globals it introduces to this file. The `burpglobal:` YAML header in the `.bambda` file is the human-readable manifest; `globals.csv` is the machine-importable counterpart.
-
----
+`templates/globals.csv` is the canonical list of all gate and configurable globals for the set of Bambdas in this folder. Format: `name,value,regex` — no header row. The user imports it via **Burp Globals → Options → Import variables**. This file is generated by a GitHub workflow within the Bambda GitHub project.
 
 ## 6. Workflow
 
@@ -267,8 +249,6 @@ When the user asks for a Bambda:
    - Are there any `import` statements? (If yes, delete them.)
    - Is there a `class` wrapper? (If yes, unwrap it.)
 
----
-
 ## 7. Persistence across runs
 
 Bambdas have **no native persistence**. Every invocation gets a fresh script-level scope.
@@ -281,9 +261,7 @@ Bambdas have **no native persistence**. Every invocation gets a fresh script-lev
 2. **Java `Preferences` API** — built-in, no setup, fine for small key-value (< ~1MB).
 3. **JDBC to a self-managed DB** — Postgres/SQLite/etc., for anything large, structured, or shared with external tools. Requires adding the driver JAR to Burp's classpath.
 
-Mention this option to the user proactively if their request implies durable state beyond what Burp Globals provides.
-
----
+Mention this option to the user proactively if their request implies durable state beyond what Burp Globals provides. A user may describe a custom table.
 
 ## 8. Reference files in this skill
 

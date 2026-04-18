@@ -4,7 +4,7 @@ Drop-in Bambda scripts for Burp Suite Professional.
 
 ## Prerequisites
 
-Install the **[Burp Globals](https://github.com/ryarmst/Burp-Globals)** extension before using any script here. Every Bambda reads one or more named variables from it at runtime via `System.getProperty("bg.<name>")`.
+Install the [Burp Globals](https://github.com/ryarmst/Burp-Globals) extension before using any script here. Every Bambda reads one or more named variables from it at runtime via `System.getProperty("bg.<name>")`. Bambdas may also use [BurpDB](https://github.com/ryarmst/burpdb) to permit reading and writing to and from a local SQLite database.
 
 ## Quick start
 

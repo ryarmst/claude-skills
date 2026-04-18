@@ -8,7 +8,7 @@ Install the **[Burp Globals](https://github.com/ryarmst/Burp-Globals)** extensio
 
 ## Quick start
 
-1. In Burp, open **Burp Globals → Options → Import variables** and load `globals.csv` from this folder.
+1. In Burp, open **Burp Globals → Options → Import variables** and load `globals.csv` from the Bambda folder.
 2. Enable only the categories you want to run (set the relevant gate variable to `true`).
 3. Import the `.bambda` file(s) via **Extensions → Bambdas → Import**.
 
@@ -19,15 +19,12 @@ Every Bambda has a gate global that must be `true` for the script to do anything
 | Global | Controls |
 |--------|----------|
 | `bambda-injection` | Active per-insertion-point injection checks (SQLi, SSTI, XSS, …) |
-| `bambda-fuzzing` | Active per-insertion-point brute-force / enumeration checks |
-| `bambda-oob` | Active OOB/blind checks via Burp Collaborator |
+| `bambda-fuzzing` | Active per-insertion-point fuzzing |
+| `bambda-pathdisco` | Active per-host path guessing |
+| `bambda-oob` | Active OOB/blind checks via Burp Collaborator or custom listener |
 | `bambda-active` | Active per-request checks (CORS, method probing, header injection) |
-| `bambda-recon` | Active per-host recon probes (well-known paths, banners) |
+| `bambda-recon` | Active per-host recon probes |
 | `bambda-passive` | Passive checks (missing headers, info disclosure, JWT detection) |
-| `bambda-filter` | Proxy HTTP history view filters |
-| `bambda-column` | Custom table columns |
-| `bambda-action` | Repeater / Intruder custom actions |
-| `bambda-proxy` | Proxy match-and-replace rules |
 
 ## Per-script globals
 

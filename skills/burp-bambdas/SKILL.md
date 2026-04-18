@@ -208,15 +208,12 @@ Use the closest category. If none fits, add a new one to `templates/globals.csv`
 | Global | Default | Used for |
 |--------|---------|----------|
 | `bambda-injection` | `false` | Active per-insertion-point injection checks (SQLi, SSTI, XSS, command injection) |
-| `bambda-fuzzing` | `false` | Active per-insertion-point brute-force / enumeration / wordlist checks |
-| `bambda-oob` | `false` | Active OOB/blind checks via Burp Collaborator |
+| `bambda-fuzzing` | `false` | Active per-insertion-point fuzzing |
+| `bambda-pathdisco` | `false` |  Active per-host path guessing |
+| `bambda-oob` | `false` | Active OOB/blind checks via Burp Collaborator or custom listener |
 | `bambda-active` | `false` | Active per-request checks (CORS, method probing, header injection) |
 | `bambda-recon` | `false` | Active per-host recon probes (well-known paths, exposed metadata) |
 | `bambda-passive` | `false` | Passive checks (missing headers, info disclosure, JWT detection) |
-| `bambda-filter` | `false` | Proxy HTTP history view filters |
-| `bambda-column` | `false` | Custom table columns |
-| `bambda-action` | `false` | Repeater / Intruder custom actions |
-| `bambda-proxy` | `false` | Proxy match-and-replace rules |
 
 ### 5.3 No-op return values by function type
 

@@ -1,6 +1,6 @@
 # claude-skills
 
-A collection of Claude Code skills and agents, installable as a plugin marketplace.
+A collection of Claude Code skills and agents, installable as a plugin marketplace. Skills should be structured workflows with examples, possible issues and constraints, and ideally a mechanism to verify output.
 
 ## Install
 

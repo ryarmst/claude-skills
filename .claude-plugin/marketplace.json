@@ -29,6 +29,16 @@
       "description": "Comprehensively maps the attack surface of a decompiled Android APK by extracting deep links, HTTP endpoints and APIs, intents, exported components, insecure configurations, and other entry points. Stores findings in a SQLite database for queryable, persistent recon, and generates a structured markdown report. Use this skill whenever a user wants to map an app's surface area, enumerate entry points, understand what an app exposes, find attack vectors, or do recon before active testing. Trigger after apk-decompile completes, or any time the user has a jadx output directory and wants to understand what the app does and exposes."
     },
     {
+      "name": "binary-strings",
+      "version": "1.0.0",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/ryarmst/claude-skills.git",
+        "path": "skills/binary-strings"
+      },
+      "description": "Reverse engineering skill for extracting and analyzing interesting strings from binary files. Use this skill whenever a user uploads a binary, executable, firmware image, shared library, or any compiled file and wants to: find hardcoded secrets/credentials, enumerate API endpoints, analyze network indicators, identify crypto constants, filter noise from `strings` output, assess for malware indicators, or perform any triage-level static analysis. Also triggers when the user says \"run strings on\", \"analyze this binary\", \"what's in this binary\", \"extract strings\", \"find hardcoded\", \"look for credentials in\", \"reverse engineer\", or pastes raw strings output and asks for interpretation. When in doubt, use this skill \u2014 it covers the full workflow from raw binary through to categorized, actionable intelligence."
+    },
+    {
       "name": "burp-bambda-persistence",
       "version": "1.0.0",
       "source": {

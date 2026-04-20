@@ -29,6 +29,16 @@
       "description": "Comprehensively maps the attack surface of a decompiled Android APK by extracting deep links, HTTP endpoints and APIs, intents, exported components, insecure configurations, and other entry points. Stores findings in a SQLite database for queryable, persistent recon, and generates a structured markdown report. Use this skill whenever a user wants to map an app's surface area, enumerate entry points, understand what an app exposes, find attack vectors, or do recon before active testing. Trigger after apk-decompile completes, or any time the user has a jadx output directory and wants to understand what the app does and exposes."
     },
     {
+      "name": "asvs-issue-research",
+      "version": "1.0.0",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/ryarmst/claude-skills.git",
+        "path": "skills/asvs-issue-research"
+      },
+      "description": "Researches the GitHub issue and PR history behind a specific OWASP ASVS requirement (e.g. \"1.2.4\", \"6.3.1\") and produces a teaching-ready briefing: the current text of the requirement, the technical considerations that underpin it, recency-weighted consensus from past discussion, suggested test cases, and teaching-material angles. Use this skill whenever the user asks about an ASVS requirement \u2014 its meaning, history, debates, rationale, edge cases, how to test it, or how to teach it. Triggers on phrases like \"explain ASVS X.Y.Z\", \"what's the rationale for\", \"research this requirement\", \"what's been discussed about\", \"how do I test\", \"prepare a teaching brief on\", \"what changed about\", or any mention of an ASVS requirement ID in a context where the user is preparing video, training, or teaching material. Always use this skill before explaining any ASVS requirement in any teaching context \u2014 the current text plus the issue history together are the authoritative source."
+    },
+    {
       "name": "binary-strings",
       "version": "1.0.0",
       "source": {

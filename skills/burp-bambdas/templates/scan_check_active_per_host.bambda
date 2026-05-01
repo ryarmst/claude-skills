@@ -3,7 +3,7 @@ name: TEMPLATE - Active per host
 function: SCAN_CHECK_ACTIVE_PER_HOST
 location: SCANNER
 burpglobal:
-  bambda-recon: false               # master on/off; set true to enable (bool)
+  gate-recon: false               # master on/off; set true to enable (bool)
 source: |
   /**
    * TEMPLATE: active scan check, runs once per host.
@@ -13,7 +13,7 @@ source: |
    * @author YOUR NAME
    **/
 
-  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-recon"))) {
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.gate-recon"))) {
       return AuditResult.auditResult();
   }
 

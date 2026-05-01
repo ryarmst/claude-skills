@@ -3,7 +3,7 @@ name: TEMPLATE - Match and replace request
 function: MATCH_AND_REPLACE_REQUEST
 location: PROXY_HTTP_HISTORY
 burpglobal:
-  bambda-proxy: false               # master on/off; set true to enable (bool)
+  gate-proxy: false               # master on/off; set true to enable (bool)
 source: |+
   /**
    * TEMPLATE: match and replace, request side.
@@ -15,7 +15,7 @@ source: |+
    * @author YOUR NAME
    **/
 
-  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-proxy"))) {
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.gate-proxy"))) {
       return requestResponse.request();
   }
 

@@ -1,6 +1,6 @@
 ---
 name: burp-bambdas
-description: Author Burp Suite Bambda scripts (custom scan checks, HTTP/WebSocket history filters, custom columns, and match-and-replace rules). Use whenever the user wants to write, modify, debug, or review a `.bambda` file or any Java snippet that runs inside Burp Suite Professional via the Bambda runtime — including scan checks (active/passive, per-host/per-request/per-insertion-point), Proxy HTTP/WS history view filters, custom table columns, or proxy match-and-replace rules. For Repeater custom actions specifically, use the `burp-repeater-actions` skill instead. Triggers on phrases like "Bambda", "custom scan check", "Burp filter script", "view filter", "custom column for Burp", "Montoya scan check", or any reference to Burp's `function: SCAN_CHECK_*`, `VIEW_FILTER`, `CUSTOM_COLUMN`, `MATCH_AND_REPLACE_*` constants.
+description: Author Burp Suite Bambda scripts (custom scan checks, HTTP/WebSocket history filters, custom columns, and match-and-replace rules). Use whenever the user wants to write, modify, debug, or review a `.bambda` file or any Java snippet that runs inside Burp Suite Professional/Community via the Bambda runtime — including scan checks (active/passive, per-host/per-request/per-insertion-point), Proxy HTTP/WS history view filters, custom table columns, or proxy match-and-replace rules. For Repeater custom actions specifically, use the `burp-repeater-actions` skill instead. Triggers on phrases like "Bambda", "custom scan check", "Burp filter script", "view filter", "custom column for Burp", "Montoya scan check", or any reference to Burp's `function: SCAN_CHECK_*`, `VIEW_FILTER`, `CUSTOM_COLUMN`, `MATCH_AND_REPLACE_*` constants.
 ---
 
 # Burp Bambdas
@@ -42,19 +42,21 @@ If the user just says "write me a Bambda for X", use this decision tree, and **o
 If it's a scan check, you **must** decide three orthogonal axes. If any is unclear from context, ask the user a single consolidated question — do not guess silently for scan checks, because the wrong axis produces a working-but-wasteful or working-but-broken script (e.g., a per-insertion-point check coded as per-request will never see `insertionPoint`).
 
 1. **Active or passive?**
-   - *Passive* = inspect the existing `requestResponse` only, send no traffic. 
-   - *Active* = send additional crafted requests via `http.sendRequest(...)`.
+   - *Passive* = inspect the existing `requestResponse` only, send no traffic. Use for missing headers, error message disclosure, info leaks, cookie attribute checks.
+   - *Active* = send additional crafted requests via `http.sendRequest(...)`. Use for SQLi, SSTI, CORS reflection, prototype pollution, command injection.
 
 2. **Per host / per request / per insertion point?**
-   - *Per host* = runs once per origin during a scan. Use for host-level configuration probes (e.g., is `/.git/HEAD` exposed, does `OPTIONS *` work). `requestResponse` is the seed request for the host.
+   - *Per host* = runs once per origin during a scan. Use for host-level configuration probes (e.g., is `/.git/HEAD` exposed, does `OPTIONS *` work, TLS-level checks). `requestResponse` is the seed request for the host.
    - *Per request* = runs once per audited base request. Use when the test depends on the specific URL/method/body but does not need to mutate a single parameter. CORS reflection, missing CSP, TRACE method, server-side prototype pollution against a JSON endpoint.
    - *Per insertion point* = runs once per parameter / header / cookie / body location Burp identifies. The variable `insertionPoint` is in scope. Use when payloads must replace a specific input value: SQLi, XSS, SSTI, command injection, parameter-level SSRF.
 
 3. **Use Collaborator?** Only if testing OOB issues (blind SSRF, blind SQLi, blind XSS, email splitting, log injection that escapes to a logger that resolves URLs, etc.). Collaborator must be enabled in the script settings; the variable `collaboratorClient` is then in scope, OR you can create one explicitly with `api().collaborator().createClient()`.
 
+When you ask the user, present these as one batched multi-choice elicitation, not three rounds of questions.
+
 ## 2. The .bambda file format
 
-A `.bambda` file is YAML-with-embedded-source. Burp's GitHub samples use this format and it's what the user will import. When the user wants a "Bambda file" (as opposed to "just the code body"), produce the full file:
+A `.bambda` file is YAML-with-embedded-source. Burp's GitHub samples all use this format and it's what the user will import. When the user wants a "Bambda file" (as opposed to "just the code body"), produce the full file:
 
 ```yaml
 id: <UUIDv4>
@@ -82,9 +84,11 @@ Notes:
 - `location` for `MATCH_AND_REPLACE_*` is `PROXY_HTTP_HISTORY`.
 - Indent the source body with 2 spaces under `source: |`. Burp tolerates `|+` (preserve trailing newlines) — either is fine.
 
+If the user only wants the code body (e.g., they're pasting into Burp's editor directly), skip the YAML wrapper and emit just the Java.
+
 ## 3. Universal rules — what is and is NOT in a Bambda
 
-A Bambda is a Java method body, not a Java file. Prompts that tell you to write `import` statements or `class { }` wrappers are wrong. Real Burp samples confirm the following.
+A Bambda is a Java method body, not a Java file. Cursor-style prompts that tell you to write `import` statements or `class { }` wrappers are wrong. Real Burp samples confirm the following.
 
 NEVER write:
 - `import` statements
@@ -152,13 +156,13 @@ System.getProperty("bg.<variable-name>")   // always returns String or null
 
 ### 5.1 Declaring globals in the YAML header
 
-All Burp Globals used by a Bambda are declared in a `burpglobal:` block in the `.bambda` file header. This keeps the manifest separate from the code and makes it trivially inspectable without parsing Java. There should be a summary block in Java comments as well if the user-facing interface displays only the Java. 
+All Burp Globals used by a Bambda are declared in a `burpglobal:` block in the `.bambda` file header — not as Java comments inside `source:`. This keeps the manifest separate from the code and makes it trivially inspectable without parsing Java. There should be a summary block in Java comments as well if the user-facing interface displays only the Java.
 
 Each entry is one line: the variable name (without the `bg.` prefix), its default value, and a `#` comment with a one-phrase description and type hint:
 
 ```yaml
 burpglobal:
-  bambda-injection: false           # master on/off; set true to enable (bool)
+  gate-injection: false             # master on/off; set true to enable (bool)
   bambda-injection-max-probes: 5    # cap on probes per insertion point (int)
 ```
 
@@ -173,7 +177,7 @@ Inside `source:`, the gate check and `System.getProperty()` calls are still requ
 
 ```java
 // Scan check gate (no logging available — just return):
-if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-injection"))) {
+if (!"true".equalsIgnoreCase(System.getProperty("bg.gate-injection"))) {
     return AuditResult.auditResult();   // swap for false / "" / return; — match function return type
 }
 final int MAX_PROBES = Integer.parseInt(
@@ -181,27 +185,56 @@ final int MAX_PROBES = Integer.parseInt(
 );
 
 // CUSTOM_ACTION gate (logging IS available):
-if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-action"))) {
-    logging().logToOutput("[MyAction] disabled — set bg.bambda-action=true to enable");
+if (!"true".equalsIgnoreCase(System.getProperty("bg.gate-action"))) {
+    logging().logToOutput("[MyAction] disabled — set bg.gate-action=true to enable");
     return;
 }
 ```
 
-### 5.2 Execution gate — choosing the right category global
+### 5.2 Global variable types
+
+Every global declared in a `.bambda` file and documented in a `.md` Globals table must carry a type drawn from this taxonomy. Use the `Type` column in the `.md` Globals table:
+
+```markdown
+## Globals
+
+| Global | Default | Type | Purpose |
+|---|---|---|---|
+| `gate-injection` | `false` | `gate` | Master on/off switch |
+| `bambda-injection-max-probes` | `5` | `depth` | Cap on probes per insertion point |
+```
+
+| Type | Used for |
+|---|---|
+| `gate` | Enables or disables the entire check; always a boolean, always listed first |
+| `depth` | Controls how much work the check does — probe count, match cap, timeout, poll iterations |
+| `sensitivity` | Tunes when a finding is raised — score thresholds, minimum match counts, margin ratios |
+| `payload` | A literal value inserted into a probe request — an IP address, string, header value, body fragment, etc. |
+| `encoding` | Varies how payloads are encoded before injection (URL-encode, base64, raw, etc.) |
+| `resource` | Points to an external file or URL used by the check (wordlist path, endpoint, schema) |
+| `callback` | Configures an OOB listener — Collaborator domain, webhook URL, DNS callback host |
+
+Classification rules:
+- A global that controls both probe count and the threshold for raising a finding is `depth` if the primary effect is work-bounding, `sensitivity` if the primary effect is detection tuning.
+- A global holding a literal value injected into a request (IP address, string fragment, header value) is `payload`, not `sensitivity` — changing it changes *what* is probed, not *when* a finding is reported.
+- A global holding a path to a file that *contains* payloads is `resource`, not `payload` — the distinction is one value vs. many.
+- When in doubt, `sensitivity` is more specific than `depth`; prefer it when the global affects what gets reported, not just how long the check runs.
+
+### 5.3 Execution gate — choosing the right category global
 
 Use the closest category. If none fits, add a new one to `templates/globals.csv` and document it in `README.md`.
 
 | Global | Default | Used for |
 |--------|---------|----------|
-| `bambda-injection` | `false` | Active per-insertion-point injection checks (SQLi, SSTI, XSS, command injection) |
-| `bambda-fuzzing` | `false` | Active per-insertion-point fuzzing |
-| `bambda-pathdisco` | `false` |  Active per-host path guessing |
-| `bambda-oob` | `false` | Active OOB/blind checks via Burp Collaborator or custom listener |
-| `bambda-active` | `false` | Active per-request checks (CORS, method probing, header injection) |
-| `bambda-recon` | `false` | Active per-host recon probes (well-known paths, exposed metadata) |
-| `bambda-passive` | `false` | Passive checks (missing headers, info disclosure, JWT detection) |
+| `gate-injection` | `false` | Active per-insertion-point injection checks (SQLi, SSTI, XSS, command injection) |
+| `gate-fuzzing` | `false` | Active per-insertion-point fuzzing |
+| `gate-pathdisco` | `false` | Active per-host path guessing |
+| `gate-oob` | `false` | Active OOB/blind checks via Burp Collaborator or custom listener |
+| `gate-active` | `false` | Active per-request checks (CORS, method probing, header injection) |
+| `gate-recon` | `false` | Active per-host recon probes (well-known paths, exposed metadata) |
+| `gate-passive` | `false` | Passive checks (missing headers, info disclosure, JWT detection) |
 
-### 5.3 No-op return values by function type
+### 5.4 No-op return values by function type
 
 | Function type | Gate return when disabled |
 |---|---|
@@ -212,9 +245,11 @@ Use the closest category. If none fits, add a new one to `templates/globals.csv`
 | `MATCH_AND_REPLACE_REQUEST` | `return requestResponse.request();` |
 | `MATCH_AND_REPLACE_RESPONSE` | `return requestResponse.response();` |
 
-### 5.4 globals.csv
+### 5.5 globals.csv
 
 `templates/globals.csv` is the canonical list of all gate and configurable globals for the set of Bambdas in this folder. Format: `name,value,regex` — no header row. The user imports it via **Burp Globals → Options → Import variables**. This file is generated by a GitHub workflow within the Bambda GitHub project.
+
+When writing a new Bambda, add any new globals it introduces to this file. The `burpglobal:` YAML header in the `.bambda` file is the human-readable manifest; `globals.csv` is the machine-importable counterpart.
 
 ## 6. Workflow
 
@@ -228,7 +263,7 @@ When the user asks for a Bambda:
    - Collaborator → `references/collaborator.md`
 3. **Pick a template** from `templates/` that matches the function type. Adapt it. Don't write from scratch.
 4. **Wire up Burp Globals** (see §5):
-   - Choose the appropriate gate global from the category table in §5.2.
+   - Choose the appropriate gate global from the category table in §5.3.
    - Add a `burpglobal:` block to the YAML header listing the gate global first, then any optional globals with their defaults and a `#` description.
    - Move any user-tunable constants (thresholds, paths, header names, etc.) to globals read via `System.getProperty("bg....")` rather than hard-coded Java `final` values.
    - In `source:`, keep the gate check and `System.getProperty()` calls — but no documentation comment block. The gate check must log when it fires.
@@ -237,7 +272,7 @@ When the user asks for a Bambda:
 6. **Output** either the bare code body or the full `.bambda` file based on user preference. Default to a full `.bambda` file if the user said "write me a Bambda" without further qualification — they almost always want something importable.
 7. **Self-check before delivering:**
    - Does the `.bambda` file have a `burpglobal:` header block listing the gate global first, then any optional globals?
-   - Does the gate check in `source:` return the correct no-op value for this function type (see §5.3)? (Only `CUSTOM_ACTION` may include a `logging()` call in the gate — all other types have no logging interface.)
+   - Does the gate check in `source:` return the correct no-op value for this function type (see §5.4)? (Only `CUSTOM_ACTION` may include a `logging()` call in the gate — all other types have no logging interface.)
    - Does the script use `logging` or `api().logging()` outside a `CUSTOM_ACTION`? If yes, remove it — Bambdas have no logging interface except in Repeater custom actions.
    - Are configurable values read from globals rather than hard-coded?
    - Does the script return the right type for its function?

@@ -3,7 +3,7 @@ name: TEMPLATE - View filter
 function: VIEW_FILTER
 location: PROXY_HTTP_HISTORY
 burpglobal:
-  bambda-filter: false              # master on/off; false = pass-through (show all) (bool)
+  gate-filter: false              # master on/off; false = pass-through (show all) (bool)
 source: |+
   /**
    * TEMPLATE: Proxy HTTP history view filter.
@@ -15,7 +15,7 @@ source: |+
    * @author YOUR NAME
    **/
 
-  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-filter"))) {
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.gate-filter"))) {
       return true;   // pass-through — show everything when filter is disabled
   }
 

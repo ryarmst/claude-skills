@@ -8,7 +8,7 @@ Install the [Burp Globals](https://github.com/ryarmst/Burp-Globals) extension be
 
 ## Quick start
 
-1. In Burp, open **Burp Globals → Options → Import variables** and load `globals.csv` from the Bambda folder.
+1. In Burp, open **Burp Globals → Options → Import variables** and load `globals.csv` from this folder.
 2. Enable only the categories you want to run (set the relevant gate variable to `true`).
 3. Import the `.bambda` file(s) via **Extensions → Bambdas → Import**.
 
@@ -18,13 +18,17 @@ Every Bambda has a gate global that must be `true` for the script to do anything
 
 | Global | Controls |
 |--------|----------|
-| `bambda-injection` | Active per-insertion-point injection checks (SQLi, SSTI, XSS, …) |
-| `bambda-fuzzing` | Active per-insertion-point fuzzing |
-| `bambda-pathdisco` | Active per-host path guessing |
-| `bambda-oob` | Active OOB/blind checks via Burp Collaborator or custom listener |
-| `bambda-active` | Active per-request checks (CORS, method probing, header injection) |
-| `bambda-recon` | Active per-host recon probes |
-| `bambda-passive` | Passive checks (missing headers, info disclosure, JWT detection) |
+| `gate-injection` | Active per-insertion-point injection checks (SQLi, SSTI, XSS, …) |
+| `gate-fuzzing` | Active per-insertion-point brute-force / enumeration checks |
+| `gate-pathdisco` | Active per-host path guessing |
+| `gate-oob` | Active OOB/blind checks via Burp Collaborator |
+| `gate-active` | Active per-request checks (CORS, method probing, header injection) |
+| `gate-recon` | Active per-host recon probes (well-known paths, banners) |
+| `gate-passive` | Passive checks (missing headers, info disclosure, JWT detection) |
+| `gate-filter` | Proxy HTTP history view filters |
+| `gate-column` | Custom table columns |
+| `gate-action` | Repeater / Intruder custom actions |
+| `gate-proxy` | Proxy match-and-replace rules |
 
 ## Per-script globals
 

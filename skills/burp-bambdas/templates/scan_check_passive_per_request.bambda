@@ -3,7 +3,7 @@ name: TEMPLATE - Passive per request
 function: SCAN_CHECK_PASSIVE_PER_REQUEST
 location: SCANNER
 burpglobal:
-  bambda-passive: false                          # master on/off; set true to enable (bool)
+  gate-passive: false                          # master on/off; set true to enable (bool)
   bambda-passive-header: Content-Security-Policy # header name to check for absence (string)
 source: |
   /**
@@ -13,7 +13,7 @@ source: |
    * @author YOUR NAME
    **/
 
-  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-passive"))) {
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.gate-passive"))) {
       return AuditResult.auditResult();
   }
 

@@ -3,7 +3,7 @@ name: TEMPLATE - Custom column
 function: CUSTOM_COLUMN
 location: PROXY_HTTP_HISTORY
 burpglobal:
-  bambda-column: false              # master on/off; set true to enable (bool)
+  gate-column: false              # master on/off; set true to enable (bool)
 source: |+
   /**
    * TEMPLATE: custom column for Proxy HTTP history.
@@ -14,7 +14,7 @@ source: |+
    * @author YOUR NAME
    **/
 
-  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-column"))) {
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.gate-column"))) {
       return "";
   }
 

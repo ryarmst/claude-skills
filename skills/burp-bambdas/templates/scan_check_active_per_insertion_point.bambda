@@ -3,7 +3,7 @@ name: TEMPLATE - Active per insertion point
 function: SCAN_CHECK_ACTIVE_PER_INSERTION_POINT
 location: SCANNER
 burpglobal:
-  bambda-injection: false           # master on/off; set true to enable (bool)
+  gate-injection: false           # master on/off; set true to enable (bool)
   bambda-injection-max-probes: 3    # max probes sent per insertion point (int)
 source: |
   /**
@@ -15,7 +15,7 @@ source: |
    * @author YOUR NAME
    **/
 
-  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-injection"))) {
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.gate-injection"))) {
       return AuditResult.auditResult();
   }
   final int MAX_PROBES = Integer.parseInt(

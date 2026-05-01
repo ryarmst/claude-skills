@@ -3,7 +3,7 @@ name: TEMPLATE - Custom action
 function: CUSTOM_ACTION
 location: REPEATER
 burpglobal:
-  bambda-action: false              # master on/off; set true to enable (bool)
+  gate-action: false              # master on/off; set true to enable (bool)
   bambda-action-max-attempts: 20    # retry cap (int)
 source: |+
   /**
@@ -16,7 +16,7 @@ source: |+
    * @author YOUR NAME
    **/
 
-  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-action"))) {
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.gate-action"))) {
       return;
   }
 

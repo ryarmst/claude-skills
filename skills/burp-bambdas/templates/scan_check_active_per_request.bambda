@@ -3,7 +3,7 @@ name: TEMPLATE - Active per request
 function: SCAN_CHECK_ACTIVE_PER_REQUEST
 location: SCANNER
 burpglobal:
-  bambda-active: false              # master on/off; set true to enable (bool)
+  gate-active: false              # master on/off; set true to enable (bool)
   bambda-active-test-header: Origin # header name used in probe (string)
 source: |
   /**
@@ -14,7 +14,7 @@ source: |
    * @author YOUR NAME
    **/
 
-  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-active"))) {
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.gate-active"))) {
       return AuditResult.auditResult();
   }
 

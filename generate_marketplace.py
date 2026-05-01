@@ -99,6 +99,41 @@ def ensure_plugin_json(plugin_dir: Path, name: str, description: str, tags: list
     print(f"    → scaffolded {plugin_json_path}")
 
 
+def parse_bambda_header(bambda_file: Path) -> dict | None:
+    """Extract name, function, and gate global from a .bambda file YAML header."""
+    content = bambda_file.read_text()
+    name_m = re.search(r'^name:\s*(.+)$', content, re.MULTILINE)
+    func_m = re.search(r'^function:\s*(.+)$', content, re.MULTILINE)
+    # First key under burpglobal: is always the gate
+    gate_m = re.search(r'^burpglobal:\s*\n\s+(\S+):', content, re.MULTILINE)
+    if not (name_m and func_m and gate_m):
+        return None
+    return {
+        "name": name_m.group(1).strip(),
+        "function": func_m.group(1).strip(),
+        "gate": gate_m.group(1).strip(),
+    }
+
+
+def generate_bambda_summary(skill_dir: Path) -> None:
+    """Write summary.md listing all .bambda templates with their Gate column."""
+    templates_dir = skill_dir / "templates"
+    if not templates_dir.is_dir():
+        return
+    bambdas = [
+        m for f in sorted(templates_dir.glob("*.bambda"))
+        if (m := parse_bambda_header(f)) is not None
+    ]
+    if not bambdas:
+        return
+    rows = ["| Template | Function | Gate |", "|----------|----------|------|"]
+    for b in bambdas:
+        rows.append(f"| {b['name']} | `{b['function']}` | `{b['gate']}` |")
+    summary_path = skill_dir / "summary.md"
+    summary_path.write_text("# Bambda Templates\n\n" + "\n".join(rows) + "\n")
+    print(f"    → generated {summary_path}")
+
+
 def collect_plugins(root: Path, repo_url: str) -> list:
     plugins = []
 
@@ -113,6 +148,7 @@ def collect_plugins(root: Path, repo_url: str) -> list:
                 continue
             description = extract_description(d, skill_file)
             ensure_plugin_json(d, d.name, description)
+            generate_bambda_summary(d)
             plugins.append({
                 "name": d.name,
                 "version": extract_version(d),

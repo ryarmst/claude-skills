@@ -3,7 +3,7 @@ name: TEMPLATE - Passive per host
 function: SCAN_CHECK_PASSIVE_PER_HOST
 location: SCANNER
 burpglobal:
-  bambda-passive: false             # master on/off; set true to enable (bool)
+  gate-passive: false             # master on/off; set true to enable (bool)
 source: |
   /**
    * TEMPLATE: passive scan check, runs once per host.
@@ -12,7 +12,7 @@ source: |
    * @author YOUR NAME
    **/
 
-  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-passive"))) {
+  if (!"true".equalsIgnoreCase(System.getProperty("bg.gate-passive"))) {
       return AuditResult.auditResult();
   }
 

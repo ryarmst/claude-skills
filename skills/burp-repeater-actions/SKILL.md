@@ -193,7 +193,7 @@ Prefer `utilities().cryptoUtils().computeHmac(...)` over hand-rolled `javax.cryp
 
 Custom actions integrate with the **[Burp Globals](https://github.com/ryarmst/Burp-Globals)** extension, which provides a centralized place to define variables (tokens, target hosts, tunable knobs) that can be referenced from both raw HTTP messages and Bambda code.
 
-### How Burp Globals works
+### How Burp Globals works (User Instructions)
 
 Once the extension is installed, in Burp:
 
@@ -209,20 +209,10 @@ The extension publishes every global as a JVM system property prefixed with `bg.
 
 ### Conventions used by this skill
 
-- The gate global for custom actions is **`bambda-action`**. The script returns early unless `bg.bambda-action` is `true`. This lets you keep an action loaded but disabled, which is useful when the action has side effects (sends requests, runs shell commands) and you want a single switch to arm/disarm it.
+- Do not use a generic gate global for custom actions like **`bambda-action`**. Use globals as instructed by the prompt/user or consider - as appropriate - the use of gate globals (true/false values to determine whether the Bambda runs at all).
+- For custom repeater actions, globals are likely used to store/retrieve global data (like constants).
 - Tunable values (retry caps, regex patterns, header names) become globals named `bambda-action-<purpose>`.
 - All globals the script uses are declared in the `burpglobal:` YAML block at the top of the `.bambda` file. Burp itself ignores this block — it's metadata for the Burp Globals tooling and for anyone reading the file to know which `bg.*` variables the script consults.
-
-### Gate pattern
-
-```java
-if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-action"))) {
-    logging().logToOutput("[MyAction] disabled — set bg.bambda-action=true to enable");
-    return;
-}
-```
-
-The disable log line is appropriate here because custom actions have a full `logging()` interface (scan checks don't, which is why their gates are silent).
 
 ### Reading typed globals with defaults
 
@@ -246,7 +236,6 @@ final boolean VERBOSE =
 
 ```yaml
 burpglobal:
-  bambda-action: false                    # master on/off; set true to enable (bool)
   bambda-action-max-attempts: 20          # retry cap (int)
   bambda-action-placeholder: FUZZ_TOKEN   # placeholder in request to replace (string)
 ```
@@ -405,7 +394,6 @@ logging().logToOutput("replaced selection with base64: " + encoded);
 5. **Generate a fresh UUIDv4** for the `id` field.
 6. **Test in the editor** with the built-in Test function before saving to the library.
 7. **Self-check before delivering:**
-   - Does the gate use `bambda-action` and log on disable?
    - Are configurable values globals, not hard-coded?
    - Is there a null guard on `requestResponse.response()` if the script reads it?
    - Are HTTP calls via `api().http().sendRequest(...)` or `sendRequests(...)`?

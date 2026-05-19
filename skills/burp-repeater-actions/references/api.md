@@ -1,6 +1,11 @@
 # Repeater Custom Action — API Reference
 
-Source: [PortSwigger writing guide](https://portswigger.net/burp/documentation/desktop/extend-burp/bambdas/creating/writing-custom-actions/writing-guide), [RetryUntilSuccess official sample](https://raw.githubusercontent.com/PortSwigger/bambdas/main/CustomAction/RetryUntilSuccess.bambda).
+Sources:
+- [PortSwigger writing guide](https://portswigger.net/burp/documentation/desktop/extend-burp/bambdas/creating/writing-custom-actions/writing-guide)
+- [PortSwigger worked example](https://portswigger.net/burp/documentation/desktop/extend-burp/bambdas/creating/writing-custom-actions/worked-example)
+- [RetryUntilSuccess sample](https://github.com/PortSwigger/bambdas/blob/main/CustomAction/RetryUntilSuccess.bambda)
+- [CookiePrefixBypass sample](https://github.com/PortSwigger/bambdas/blob/main/CustomAction/CookiePrefixBypass.bambda)
+- [Montoya API JavaDoc](https://portswigger.github.io/burp-extensions-montoya-api/javadoc/burp/api/montoya/MontoyaApi.html)
 
 All `burp.api.montoya.*` types are **auto-imported**. Use simple names throughout.
 
@@ -8,16 +13,19 @@ All `burp.api.montoya.*` types are **auto-imported**. Use simple names throughou
 
 ## Objects in scope
 
+The Custom actions writing guide names seven objects exposed to a `CUSTOM_ACTION` script:
+
 | Variable | Type | Notes |
 |---|---|---|
 | `requestResponse` | `HttpRequestResponse` | Current request/response pair in the active Repeater tab |
-| `httpEditor` | `HttpRepeaterEditor` | Active HTTP editor in Repeater; use to mutate request/response panes |
-| `wsEditor` | WebSocket editor | Active WebSocket editor; available instead of `httpEditor` in WS tabs |
+| `selection` | `RequestResponseSelection` | User-highlighted text in the request or response pane |
+| `httpEditor` | `HttpEditor` | Active HTTP editor; use to mutate request/response panes |
 | `api()` | `MontoyaApi` | Full Montoya API root |
 | `utilities()` | `Utilities` | Shorthand for `api().utilities()` |
 | `logging()` | `Logging` | Output to Custom actions panel. **Only available in CUSTOM_ACTION.** |
-| `selection` | `RequestResponseSelection` | User-highlighted text in the request or response pane |
 | `ai()` | `Ai` | LLM integration (see PortSwigger AI docs for details) |
+
+`api`, `utilities`, `logging`, and `ai` are available as both bare fields and parenthesised accessors — `logging.logToOutput("x")` and `logging().logToOutput("x")` are equivalent. The official sample bambdas use the method form; this reference does the same for consistency.
 
 ---
 
@@ -45,6 +53,14 @@ req.withHeader("X-Custom", "value")             // overwrites existing
 req.withAddedHeader("X-Custom", "value")        // always adds
 req.withRemovedHeader("Cookie")
 req.withQueryParameter(HttpParameter.urlParameter("debug", "1"))
+req.withAddedParameters(listOfParams)
+req.withRemovedParameters(listOfParams)
+req.withUpdatedHeader("X-Custom", "newValue")
+
+// Construction from scratch
+HttpRequest.httpRequestFromUrl("https://example.com/path")
+HttpRequest.httpRequest(httpService, "GET /path HTTP/1.1\r\nHost: ...\r\n\r\n")
+HttpRequest.httpRequest(httpService, ByteArray.byteArray(rawBytes))
 
 // Reading
 req.url()
@@ -72,6 +88,9 @@ res.bodyToString()
 res.body()                                       // ByteArray
 res.headerValue("Set-Cookie")
 res.hasHeader("X-Frame-Options")
+res.headers()                                    // List<HttpHeader>
+res.cookies()                                    // List<Cookie>
+res.attributes(AttributeType.COOKIE_NAMES)       // List<Attribute>
 res.isStatusCodeClass(StatusCodeClass.CLASS_2XX_SUCCESS)
 res.toByteArray()                                // for httpEditor.responsePane().set(...)
 ```
@@ -81,11 +100,14 @@ res.toByteArray()                                // for httpEditor.responsePane(
 ## `httpEditor` — mutating the editor in place
 
 ```java
-httpEditor.requestPane().set(req.toByteArray())          // replace entire request
+httpEditor.requestPane().set(req.toByteArray())            // replace entire request
 httpEditor.responsePane().set(rr.response().toByteArray()) // replace entire response
-httpEditor.requestPane().replace("old", "new")           // substring replace in request
-httpEditor.responsePane().replace("old", "new")          // substring replace in response
+httpEditor.requestPane().set("plain text")                  // also accepts String
+httpEditor.requestPane().replace("old", "new")              // substring replace in request
+httpEditor.responsePane().replace("old", "new")             // substring replace in response
 ```
+
+`set()` updates the editor only — it does NOT mutate the underlying `requestResponse.request()`. If you need the new value later in the script, capture it in a local variable first.
 
 ---
 
@@ -97,8 +119,12 @@ var rr = api().http().sendRequest(req);
 var rr = api().http().sendRequest(req, HttpMode.HTTP_2);   // force HTTP/2
 var rr = api().http().sendRequest(req, HttpMode.HTTP_1);   // force HTTP/1.1
 
-// Parallel batch
+// Parallel batch — uses HTTP/2 single-packet attack or HTTP/1 last-byte sync.
+// This is the right primitive for race-condition probing.
 List<HttpRequestResponse> results = api().http().sendRequests(List.of(req1, req2));
+
+// Fetch external data
+var ext = api().http().sendRequest(HttpRequest.httpRequestFromUrl("https://example.com/feed"));
 
 // Always guard the result:
 if (!rr.hasResponse()) { logging().logToOutput("no response"); return; }
@@ -108,11 +134,25 @@ if (!rr.hasResponse()) { logging().logToOutput("no response"); return; }
 
 ---
 
-## `api().repeater()` / `api().organizer()`
+## `api().repeater()` / `api().organizer()` / `api().siteMap()`
 
 ```java
 api().repeater().sendToRepeater(req);
 api().organizer().sendToOrganizer(rr);           // accepts HttpRequestResponse
+
+// Raise an issue from a custom action (see CookiePrefixBypass.bambda).
+api().siteMap().add(AuditIssue.auditIssue(
+    "Issue name",
+    "Description (may include <b>HTML</b>)",
+    "Remediation",
+    req.url(),
+    AuditIssueSeverity.LOW,
+    AuditIssueConfidence.TENTATIVE,
+    "Background",
+    "References",
+    AuditIssueSeverity.LOW,
+    rr
+));
 ```
 
 ---
@@ -139,7 +179,7 @@ selection.hasResponseSelection()                 // boolean
 selection.requestSelection().contents().toString()
 selection.responseSelection().contents().toString()
 
-// Byte offsets (useful for splicing into the request)
+// Byte offsets (useful for splicing into the message as a string)
 int start = selection.responseSelection().offsets().startIndexInclusive();
 int end   = selection.responseSelection().offsets().endIndexExclusive();
 ```
@@ -149,14 +189,14 @@ int end   = selection.responseSelection().offsets().endIndexExclusive();
 ## `utilities()` — helper functions
 
 ```java
-utilities().base64Utils().encode(ByteArray.byteArray(data))
-utilities().base64Utils().decode(str)            // returns ByteArray
+utilities().base64Utils().encode(ByteArray.byteArray(data))   // ByteArray
+utilities().base64Utils().decode(str)                          // ByteArray
 utilities().htmlUtils().encode(str)
 utilities().htmlUtils().decode(str)
 utilities().urlUtils().encode(str)
 utilities().urlUtils().decode(str)
 utilities().cryptoUtils().generateDigest(byteArray, DigestAlgorithm.SHA_256)
-utilities().cryptoUtils().computeHmac(...)
+utilities().cryptoUtils().computeHmac(keyBytes, dataBytes, HmacAlgorithm.HMAC_SHA256)
 utilities().jsonUtils().isValidJson(str)
 utilities().jsonUtils().readString(jsonStr, "data.token")
 utilities().jsonUtils().readNumber(jsonStr, "count")
@@ -165,6 +205,7 @@ utilities().randomUtils().randomBytes(16)
 ```
 
 `DigestAlgorithm`: `MD5`, `SHA_1`, `SHA_256`, `SHA_384`, `SHA_512`.
+`HmacAlgorithm`: `HMAC_SHA1`, `HMAC_SHA256`, `HMAC_SHA384`, `HMAC_SHA512`.
 
 ---
 
@@ -175,8 +216,9 @@ Always prefer the split-arg form over `dangerouslyExecute` — the former has no
 ```java
 // Safe: command and arguments passed separately.
 var result = utilities().shellUtils().execute("jq", ".token", "-r");
-logging().logToOutput(result.output());
-logging().logToError("stderr", null);  // result.error() for stderr
+logging().logToOutput(result.output());          // stdout
+logging().logToOutput(result.error());           // stderr
+result.exitCode();                                // int
 
 // With options.
 var opts = executeOptions()
@@ -204,6 +246,7 @@ ba.toString()                                    // UTF-8 String
 ba.length()
 ba.indexOf("needle", true)                       // case-insensitive search
 ba.subArray(start, end)
+ba.setByte(idx, (byte) 0xE2)                     // mutating setter
 ```
 
 ---
@@ -217,9 +260,13 @@ HttpParameter.cookieParameter(name, value)
 HttpParameter.parameter(name, value, HttpParameterType.JSON)
 ```
 
+`HttpParameterType`: `URL`, `BODY`, `COOKIE`, `JSON`, `XML`, `XML_ATTRIBUTE`, `MULTIPART_ATTRIBUTE`.
+
 ---
 
 ## Burp Globals — reading variables
+
+The Burp Globals extension (https://github.com/ryarmst/Burp-Globals) publishes each global as a JVM system property prefixed with `bg.`. Read them with `System.getProperty()`.
 
 ```java
 // Boolean gate.
@@ -237,4 +284,10 @@ final String TARGET = java.util.Objects.requireNonNullElse(
 final int MAX = Integer.parseInt(
     java.util.Objects.requireNonNullElse(System.getProperty("bg.bambda-action-max"), "20")
 );
+
+// Boolean (no default = false).
+final boolean VERBOSE =
+    "true".equalsIgnoreCase(System.getProperty("bg.bambda-action-verbose"));
 ```
+
+Globals are also expanded inside raw HTTP messages via `${bg:variable_name}` placeholders, which Burp Globals resolves at send time.

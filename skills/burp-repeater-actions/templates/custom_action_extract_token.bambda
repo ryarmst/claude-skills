@@ -1,45 +1,50 @@
-id: 00000000-0000-0000-0000-000000000000
+id: 79fa1e00-5a1b-481c-8ab7-951e5dac4c1e
 name: TEMPLATE - Extract token and patch request
 function: CUSTOM_ACTION
 location: REPEATER
 burpglobal:
-  bambda-action: false                                    # master on/off; set true to enable (bool)
-  bambda-action-token-pattern: csrf[_-]?token["']?\s*[=:]?\s*["']([^"'\s]+)  # regex with capture group for token (string)
-  bambda-action-placeholder: FUZZ_TOKEN                  # placeholder in request to replace (string)
+    bambda-action: false                                                        # master on/off; set true to enable (bool)
+    bambda-action-token-pattern: csrf[_-]?token["']?\s*[=:>]\s*["']?([^"'\s<>&]+)  # regex with capture group for token (string)
+    bambda-action-placeholder: FUZZ_TOKEN                                       # placeholder in request to replace (string)
 source: |
-  /**
-   * TEMPLATE: extract a token (CSRF, nonce, etc.) from the response and
-   * replace a placeholder in the request editor with it.
-   *
-   * @author YOUR NAME
-   **/
+    /**
+     * TEMPLATE: extract a token (CSRF, nonce, etc.) from the response and
+     * replace a placeholder in the request editor with it.
+     *
+     * The default pattern matches both quoted and unquoted values, and uses
+     * =, :, or > as the separator — covers HTML attributes, JSON bodies, and
+     * inline JS assignments. Override via bg.bambda-action-token-pattern for
+     * application-specific token names.
+     *
+     * @author YOUR NAME
+     **/
 
-  if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-action"))) {
-      logging().logToOutput("[ExtractToken] disabled — set bg.bambda-action=true to enable");
-      return;
-  }
+    if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-action"))) {
+        logging().logToOutput("[ExtractToken] disabled — set bg.bambda-action=true to enable");
+        return;
+    }
 
-  final String PATTERN     = java.util.Objects.requireNonNullElse(
-      System.getProperty("bg.bambda-action-token-pattern"),
-      "csrf[_-]?token[\"']?\\s*[=:]\\s*[\"']([^\"'\\s]+)"
-  );
-  final String PLACEHOLDER = java.util.Objects.requireNonNullElse(
-      System.getProperty("bg.bambda-action-placeholder"), "FUZZ_TOKEN"
-  );
+    final String PATTERN = java.util.Objects.requireNonNullElse(
+        System.getProperty("bg.bambda-action-token-pattern"),
+        "csrf[_-]?token[\"']?\\s*[=:>]\\s*[\"']?([^\"'\\s<>&]+)"
+    );
+    final String PLACEHOLDER = java.util.Objects.requireNonNullElse(
+        System.getProperty("bg.bambda-action-placeholder"), "FUZZ_TOKEN"
+    );
 
-  if (!requestResponse.hasResponse()) {
-      logging().logToOutput("no response — send the request first");
-      return;
-  }
+    if (!requestResponse.hasResponse()) {
+        logging().logToOutput("no response — send the request first");
+        return;
+    }
 
-  var body = requestResponse.response().bodyToString();
-  var m = java.util.regex.Pattern.compile(PATTERN).matcher(body);
+    var body = requestResponse.response().bodyToString();
+    var m = java.util.regex.Pattern.compile(PATTERN, java.util.regex.Pattern.CASE_INSENSITIVE).matcher(body);
 
-  if (!m.find()) {
-      logging().logToOutput("no token matching /" + PATTERN + "/ found in response");
-      return;
-  }
+    if (!m.find()) {
+        logging().logToOutput("no token matching /" + PATTERN + "/ found in response");
+        return;
+    }
 
-  var token = m.group(1);
-  logging().logToOutput("extracted token: " + token);
-  httpEditor.requestPane().replace(PLACEHOLDER, token);
+    var token = m.group(1);
+    logging().logToOutput("extracted token: " + token);
+    httpEditor.requestPane().replace(PLACEHOLDER, token);

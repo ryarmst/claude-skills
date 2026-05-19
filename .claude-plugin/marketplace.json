@@ -96,7 +96,7 @@
         "url": "https://github.com/ryarmst/claude-skills.git",
         "path": "skills/burp-repeater-actions"
       },
-      "description": "Author Burp Suite Repeater custom actions (CUSTOM_ACTION Bambdas). Use when the user wants to write, modify, debug, or review a script that runs as a button in Burp Repeater \u2014 including request signing, race-condition probes, batch sends, response decoding, token extraction, CSRF manipulation, automated retries, shell invocation, and AI-assisted analysis. Triggers on phrases like \"Repeater action\", \"custom action\", \"Repeater button\", \"CUSTOM_ACTION\", or any request for a script that runs manually inside Repeater against the current request/response pair."
+      "description": "Author Burp Suite Repeater custom actions (CUSTOM_ACTION Bambdas). Use when the user wants to write, modify, debug, or review a script that runs as a button in Burp Repeater's Custom actions side panel \u2014 including request signing, race-condition probes, batch sends, response decoding, token extraction, CSRF manipulation, automated retries, shell invocation, and AI-assisted analysis. Triggers on phrases like \"Repeater action\", \"custom action\", \"Repeater button\", \"CUSTOM_ACTION\", or any request for a script that runs manually inside Repeater against the current request/response pair."
     },
     {
       "name": "markdown-document",

@@ -7,7 +7,7 @@ description: Persist state across Burp Bambda invocations - scan checks, custom 
 
 Bambdas have no native cross-invocation persistence. Every time Burp invokes your scan check / filter / action, it executes the script body fresh. Local variables, instance fields, anything you `var = new HashMap<>()` at the top of the script — all gone the moment the script returns.
 
-This skill documents the two viable workarounds.
+This skill documents three viable strategies.
 
 ---
 
@@ -46,9 +46,9 @@ Read `references/burpdb.md` for the BurpDB option, `references/preferences_api.m
 
 ---
 
-## Critical caveats (both strategies)
+## Critical caveats (all strategies)
 
-1. **Bambdas run in a JVM sandbox.** All three strategies use standard JDK APIs (`java.util.prefs.Preferences`, `java.sql.DriverManager`) which are available, but you cannot load arbitrary JARs from inside a Bambda. For self-managed JDBC this means **the database driver must already be on Burp's classpath**, which in practice means: use a driver that ships with the JDK, or use Burp's "Extensions → APIs → Java environment → Folder for loading library JAR files (.jar)" setting to add the driver JAR. **BurpDB is exempt from this requirement** — the extension shades the SQLite JDBC driver and registers a `DriverShim` with `DriverManager` at load time, so Bambdas call `DriverManager.getConnection(System.getProperty("burp.db.url"))` directly. No extra JAR, no `Class.forName("org.sqlite.JDBC")`, and no classloader tricks from inside the Bambda.
+1. **Bambdas run in a JVM sandbox.** You cannot load arbitrary JARs from inside a Bambda. For self-managed JDBC this means **the database driver must already be on Burp's classpath** — use a driver that ships with the JDK, or add the driver JAR via Burp's "Extensions → APIs → Java environment → Folder for loading library JAR files (.jar)" setting. **BurpDB is exempt from driver JAR setup** — the extension shades `sqlite-jdbc` and publishes the live driver object at `burp.db.driver.instance`. Bambdas connect via `driver.connect(dbUrl, new java.util.Properties())`, **not** `DriverManager.getConnection()` (Java 9+ caller-sensitivity rejects sibling-classloader drivers). Do not call `Class.forName("org.sqlite.JDBC")` — the driver class is not visible outside the extension JAR.
 
 2. **Concurrency.** Burp runs scan checks in parallel. Whatever you write to must be safe for concurrent access:
    - `Preferences` is thread-safe at the API level but you still need to handle read-modify-write atomicity yourself (e.g., to increment a counter without losing updates).
@@ -66,7 +66,7 @@ Read `references/burpdb.md` for the BurpDB option, `references/preferences_api.m
 
 1. Ask (or infer) **what** they want to store: small key-value vs. records vs. blobs.
 2. Ask (or infer) **what for**: dedupe, baseline, corpus, cross-Bambda sharing, troubleshooting log.
-3. **Is the BurpDB extension installed and loaded?** Check `System.getProperty("burp.db.url")` (and optionally `burp.db.driver`). If yes (or if the user is willing to install it), use BurpDB — it requires no driver setup, provides pre-provisioned tables, and adds a standard logging channel. Read `references/burpdb.md`.
+3. **Is the BurpDB extension installed and loaded?** Check `System.getProperties().get("burp.db.driver.instance")` and `System.getProperty("burp.db.url")`. If both are set (or if the user is willing to install BurpDB), use BurpDB — no driver JAR setup, pre-provisioned tables, standard logging channel. Read `references/burpdb.md`.
 4. If BurpDB is not available:
    - Recommend Preferences for small key-value with <1MB total.
    - Recommend self-managed JDBC for anything else.
@@ -81,6 +81,6 @@ Read `references/burpdb.md` for the BurpDB option, `references/preferences_api.m
 
 ## Reference files
 
-- `references/burpdb.md` — BurpDB extension patterns: `burp.db.url` / `burp.db.driver` system properties, `DriverManager.getConnection` (no `Class.forName`), the pre-provisioned `kv` / `findings` / `logs` tables, the standard logging convention, concurrency rules, and a full dedupe example.
+- `references/burpdb.md` — BurpDB extension patterns: `burp.db.driver.instance` + `burp.db.url` connection via `driver.connect()` (never `DriverManager.getConnection`), the pre-provisioned `kv` / `findings` / `logs` tables, the standard logging convention, concurrency rules, and a full dedupe example.
 - `references/preferences_api.md` — Java `Preferences` API patterns: namespace setup, atomic increment, list-of-strings encoding, clearing, size limits.
 - `references/jdbc.md` — Self-managed JDBC patterns: driver checklist, connection management (with caveats about per-invocation overhead), the schema-on-startup idiom, dedupe via `INSERT ... ON CONFLICT`, batching, and DB-specific notes for Postgres / SQLite / MySQL.

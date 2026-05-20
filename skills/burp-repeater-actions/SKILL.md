@@ -23,6 +23,7 @@ Read this whole file. Then load `references/api.md`. Then write code.
 - Fetch external data via outbound HTTP requests
 - Raise scanner audit issues (see PortSwigger's official `CookiePrefixBypass.bambda`)
 - Use LLM analysis via `ai()` for payload generation or response analysis
+- Persist state across button clicks (token history, seen endpoints, run counters) when combined with the **burp-bambda-persistence** skill
 
 Custom actions run only in Burp Repeater. They're not the primary mechanism for continuous vulnerability scanning — a `SCAN_CHECK_*` Bambda is — but they can call `api().siteMap().add(...)` to raise findings when appropriate.
 
@@ -359,7 +360,36 @@ logging().logToOutput("replaced selection with base64: " + encoded);
 
 ---
 
-## 7. Gotchas
+## 7. Persistence across invocations
+
+Repeater actions are manually triggered, but each click is a fresh script invocation — local variables do not survive between runs. If the action needs to **remember state** (dedupe across hosts, accumulate a corpus, share data with a scan check or custom column, track seen tokens), read and follow the **burp-bambda-persistence** skill.
+
+**Default:** use the [BurpDB](https://github.com/ryarmst/BurpDB) extension when available. Connect via the published driver instance — never `DriverManager.getConnection()`:
+
+```java
+var driver = (java.sql.Driver) System.getProperties().get("burp.db.driver.instance");
+if (driver == null) {
+    logging().logToOutput("[MyAction] BurpDB not loaded — install/reload the BurpDB extension");
+    return;
+}
+var dbUrl = System.getProperty("burp.db.url");
+if (dbUrl == null || dbUrl.isBlank()) return;
+
+try (var conn = driver.connect(dbUrl, new java.util.Properties());
+     var ps = conn.prepareStatement(
+         "INSERT INTO kv(key, value, updated_at) VALUES(?, ?, strftime('%s','now')) " +
+         "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at")) {
+    ps.setString(1, "my-action.last-token");
+    ps.setString(2, token);
+    ps.executeUpdate();
+}
+```
+
+For small key-value needs without BurpDB, the persistence skill covers Java `Preferences`. For full patterns (schema, concurrency, logging), read `references/burpdb.md` inside that skill — do not invent ad-hoc persistence code here.
+
+---
+
+## 8. Gotchas
 
 1. **`requestResponse.response()` may be null** if the user hasn't sent the request yet. Guard with `requestResponse.hasResponse()` before accessing response fields. This is the single most common runtime failure.
 
@@ -385,9 +415,9 @@ logging().logToOutput("replaced selection with base64: " + encoded);
 
 ---
 
-## 8. Workflow
+## 9. Workflow
 
-1. **Clarify the use case**: what should the action do when the user clicks the button? Does it send new requests? Modify the editor? Log output? Route to another tool? Raise a finding?
+1. **Clarify the use case**: what should the action do when the user clicks the button? Does it send new requests? Modify the editor? Log output? Route to another tool? Raise a finding? **Need state between clicks?** Load the **burp-bambda-persistence** skill (§7).
 2. **Load `references/api.md`** for the full API surface.
 3. **Pick a template** from `templates/` or a Pattern in §6 that matches the use case.
 4. **Wire up Burp Globals** (§5): gate global first, then any tunables.

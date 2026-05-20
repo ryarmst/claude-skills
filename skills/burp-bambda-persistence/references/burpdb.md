@@ -1,6 +1,6 @@
 # BurpDB — Managed SQLite via the BurpDB Extension
 
-BurpDB is a Burp extension that provisions a SQLite database and exposes its JDBC URL via a JVM system property. No driver JAR setup, no server, no connection string to configure — the extension handles all of it.
+BurpDB is a Burp extension that provisions a shared SQLite database for cross-invocation persistence in Bambdas (scan checks, custom columns, filters, Repeater actions). It shades `sqlite-jdbc` into its JAR, creates the schema on load, and exposes connection details via JVM system properties. No external JDBC JAR or classpath setup is required.
 
 **When to prefer BurpDB over a self-managed DB:**
 - You want persistence with zero setup (no driver JAR, no external server).
@@ -8,35 +8,88 @@ BurpDB is a Burp extension that provisions a SQLite database and exposes its JDB
 - The pre-provisioned tables (`kv`, `findings`, `logs`) are sufficient for your use case.
 - You want a standard troubleshooting/logging channel that other BurpDB-aware Bambdas can read.
 
+Source of truth: [BurpDB BAMBDA_PROMPT.md](https://github.com/ryarmst/BurpDB/blob/main/BAMBDA_PROMPT.md)
+
 ---
 
-## 1. Opening a connection
+## 1. How it works
+
+On load, BurpDB:
+
+1. Loads the shaded SQLite driver in the extension classloader.
+2. Publishes the live `java.sql.Driver` object in `System.getProperties()` under `burp.db.driver.instance`.
+3. Sets `burp.db.url` to `jdbc:sqlite:<path>` (default file: `~/.burp/burpdb.db`, changeable in the BurpDB suite tab).
+4. Creates `kv`, `findings`, and `logs` if missing (WAL mode, 5s busy timeout).
+
+Bambdas run in Burp's classloader, not the extension's. **`DriverManager.getConnection()` fails from Bambdas** because Java 9+ caller-sensitivity checks reject drivers registered by sibling classloaders. Bambdas must call `driver.connect()` on the instance published in `System.getProperties()` — a `Hashtable<Object,Object>` singleton visible to every classloader.
+
+Do not call `Class.forName("org.sqlite.JDBC")` or add `sqlite-jdbc` to Burp's library JAR folder. The driver class is not visible outside the extension JAR.
+
+All three system properties are JVM-global. If BurpDB is unloaded, they are cleared.
+
+---
+
+## 2. System properties
+
+| Property | Type | Meaning |
+|---|---|---|
+| `burp.db.driver.instance` | `java.sql.Driver` | Live driver object — **use this to connect** |
+| `burp.db.url` | `String` | JDBC URL, e.g. `jdbc:sqlite:/home/user/.burp/burpdb.db` |
+| `burp.db.driver` | `String` | Driver class name (`org.sqlite.JDBC`) — presence confirms extension loaded |
+
+---
+
+## 3. Opening a connection
 
 ```java
-try (var conn = java.sql.DriverManager.getConnection(System.getProperty("burp.db.url"))) {
-    // ... work ...
+var driver = (java.sql.Driver) System.getProperties().get("burp.db.driver.instance");
+if (driver == null) return;  // extension not loaded
+
+var dbUrl = System.getProperty("burp.db.url");
+if (dbUrl == null || dbUrl.isBlank()) return;
+
+try (var conn = driver.connect(dbUrl, new java.util.Properties())) {
+    // standard JDBC from here
 }
 ```
 
 Rules:
-- `System.getProperty("burp.db.url")` is set by the BurpDB extension when Burp starts. If it returns `null`, the extension is not installed or not loaded — handle this gracefully (log to Burp output and return a no-op).
+- Check `burp.db.driver.instance` first — if null, BurpDB is not installed, not loaded, or failed to initialize.
+- Optionally verify `burp.db.driver` is `org.sqlite.JDBC` as a secondary health signal.
+- **Never** call `DriverManager.getConnection()` from a Bambda when using BurpDB.
+- **Never** hard-code DB paths — always read `burp.db.url`.
 - No username or password — the extension manages the SQLite file.
-- No `Class.forName(...)` needed — the BurpDB extension adds the SQLite driver to Burp's classpath automatically.
 - **Always use try-with-resources** for every `Connection`, `Statement`, `PreparedStatement`, and `ResultSet`.
+
+### Health check (custom column or Repeater action)
+
+```java
+var driver = (java.sql.Driver) System.getProperties().get("burp.db.driver.instance");
+if (driver == null) return "no driver";
+try (var conn = driver.connect(System.getProperty("burp.db.url"), new java.util.Properties());
+     var stmt = conn.createStatement();
+     var rs = stmt.executeQuery("SELECT 1")) {
+    return rs.next() ? "ok" : "no rows";
+} catch (Exception e) {
+    return e.getMessage();
+}
+```
+
+Expect `ok` when BurpDB is loaded. If you see `no driver`, reload the BurpDB extension.
 
 ---
 
-## 2. Pre-provisioned tables
+## 4. Pre-provisioned tables
 
-The extension guarantees these tables exist before your Bambda runs. Do **not** re-create them with `CREATE TABLE IF NOT EXISTS`.
+The extension guarantees these tables exist before your Bambda runs. Do **not** `CREATE TABLE`.
 
 ### `kv(key, value, updated_at)`
 
-General-purpose key-value store. Use for counters, flags, last-seen tokens, or any scalar state that doesn't fit the other tables.
+General-purpose key-value store. Use for counters, flags, dedupe keys, last-seen tokens, or any scalar state.
 
 ```java
-// Write
-try (var conn = java.sql.DriverManager.getConnection(System.getProperty("burp.db.url"));
+// Write (upsert)
+try (var conn = driver.connect(dbUrl, new java.util.Properties());
      var ps = conn.prepareStatement(
          "INSERT INTO kv(key, value, updated_at) VALUES(?, ?, strftime('%s','now')) " +
          "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at")) {
@@ -46,7 +99,7 @@ try (var conn = java.sql.DriverManager.getConnection(System.getProperty("burp.db
 }
 
 // Read
-try (var conn = java.sql.DriverManager.getConnection(System.getProperty("burp.db.url"));
+try (var conn = driver.connect(dbUrl, new java.util.Properties());
      var ps = conn.prepareStatement("SELECT value FROM kv WHERE key = ?")) {
     ps.setString(1, "my-bambda.last-host");
     try (var rs = ps.executeQuery()) {
@@ -59,61 +112,73 @@ try (var conn = java.sql.DriverManager.getConnection(System.getProperty("burp.db
 
 **Namespace your keys.** Prefix with the Bambda/tool name (e.g., `cors-check.seen-host:example.com`) to avoid collisions with other Bambdas sharing the same DB.
 
-### `findings(id, host, issue, detail, severity, created_at)`
-
-Structured finding records. Use for deduplication or to build a corpus of findings that non-Burp tools can read.
+For dedupe, use `INSERT ... ON CONFLICT DO NOTHING` on a namespaced key:
 
 ```java
-// Insert (dedupe by host + issue)
-try (var conn = java.sql.DriverManager.getConnection(System.getProperty("burp.db.url"));
+try (var conn = driver.connect(dbUrl, new java.util.Properties());
+     var ps = conn.prepareStatement(
+         "INSERT INTO kv(key, value, updated_at) VALUES(?, '1', strftime('%s','now')) " +
+         "ON CONFLICT(key) DO NOTHING")) {
+    ps.setString(1, "xcto-check.seen-host:" + host);
+    if (ps.executeUpdate() == 0) return AuditResult.auditResult();  // already seen
+}
+```
+
+### `findings(id, host, issue, detail, severity, created_at)`
+
+Structured finding records. Use for building a corpus of observations that non-Burp tools can read.
+
+```java
+try (var conn = driver.connect(dbUrl, new java.util.Properties());
      var ps = conn.prepareStatement(
          "INSERT INTO findings(host, issue, detail, severity, created_at) " +
-         "VALUES(?, ?, ?, ?, strftime('%s','now')) " +
-         "ON CONFLICT(host, issue) DO NOTHING")) {
+         "VALUES(?, ?, ?, ?, strftime('%s','now'))")) {
     ps.setString(1, host);
     ps.setString(2, "CORS: arbitrary origin reflection");
     ps.setString(3, detail);
     ps.setString(4, "MEDIUM");
-    var inserted = ps.executeUpdate();   // 0 = duplicate, 1 = new
-    if (inserted == 0) return AuditResult.auditResult();
+    ps.executeUpdate();
 }
 ```
 
-> Note: the `ON CONFLICT` behaviour depends on whether the table has a `UNIQUE` constraint on `(host, issue)`. If the extension schema omits it, use a `SELECT` check before inserting, or rely on a different dedupe column.
+Prefer `kv` for dedupe — the `findings` table has no unique constraint on `(host, issue)`.
 
 ### `logs(created_at, reporter, details)`
 
 The standard troubleshooting channel. **Every Bambda should write here when something unexpected happens** — it creates a shared audit trail that any BurpDB-aware tool can read.
 
 ```java
-try (var conn = java.sql.DriverManager.getConnection(System.getProperty("burp.db.url"));
+try (var conn = driver.connect(dbUrl, new java.util.Properties());
      var ps = conn.prepareStatement(
          "INSERT INTO logs(created_at, reporter, details) VALUES(strftime('%s','now'), ?, ?)")) {
-    ps.setString(1, "cors-check");                    // Bambda/tool name
-    ps.setString(2, "DB URL missing; skipping check"); // short human-readable message
+    ps.setString(1, "my-bambda");
+    ps.setString(2, "driver instance missing; skipping check");
     ps.executeUpdate();
 }
 ```
 
 Logging rules:
-- `created_at`: always `strftime('%s','now')` — Unix epoch seconds, matching SQLite conventions.
-- `reporter`: the Bambda or tool name (a static string literal, not a computed value).
-- `details`: short, human-readable, no secrets. Good: `"found CORS reflection on example.com"`. Bad: `"Bearer eyJhbGc..."`.
-- Log for: missing DB URL, unexpected exceptions, deduplication hits worth tracking, and any state transitions a human might want to audit.
+- `created_at`: always `strftime('%s','now')` — Unix epoch seconds.
+- `reporter`: the Bambda or tool name (a static string literal).
+- `details`: short, human-readable, no secrets.
+- Log for: missing driver, unexpected exceptions, and any state transitions worth auditing.
+
+Prefer `PreparedStatement` for writes. Keep `logs.details` short; no secrets.
 
 ---
 
-## 3. Connection guard
+## 5. Connection guard
 
-Always check that the property is set before calling `getConnection`:
+Always resolve the driver and URL before connecting:
 
 ```java
-var dbUrl = System.getProperty("burp.db.url");
-if (dbUrl == null) {
-    api().logging().logToOutput("[my-bambda] burp.db.url not set — BurpDB extension not loaded");
+var driver = (java.sql.Driver) System.getProperties().get("burp.db.driver.instance");
+var dbUrl  = System.getProperty("burp.db.url");
+if (driver == null || dbUrl == null || dbUrl.isBlank()) {
+    api().logging().logToOutput("[my-bambda] BurpDB not loaded — skipping persistence");
     return AuditResult.auditResult();
 }
-try (var conn = java.sql.DriverManager.getConnection(dbUrl)) {
+try (var conn = driver.connect(dbUrl, new java.util.Properties())) {
     // ...
 } catch (java.sql.SQLException e) {
     api().logging().logToError("[my-bambda] DB error: " + e.getMessage());
@@ -121,20 +186,23 @@ try (var conn = java.sql.DriverManager.getConnection(dbUrl)) {
 }
 ```
 
+In Repeater custom actions, use `logging()` instead of `api().logging()`.
+
 ---
 
-## 4. Concurrency
+## 6. Concurrency
 
-BurpDB uses SQLite under the hood. The same concurrency rules as self-managed SQLite apply:
+Burp runs scan checks (and parallel Repeater sends) concurrently. SQLite serializes writes:
 
 - Concurrent reads are fine.
-- Concurrent writes serialize via SQLite's full-database write lock. The extension sets a busy timeout — you can rely on it, but don't hold write transactions open across slow operations (e.g., HTTP probes).
-- Use `INSERT ... ON CONFLICT DO NOTHING/DO UPDATE` instead of "check then insert" patterns.
-- For multi-statement atomic work: `conn.setAutoCommit(false)` + `conn.commit()`.
+- Use `INSERT ... ON CONFLICT DO NOTHING/DO UPDATE` instead of check-then-insert.
+- Do not hold write transactions open across slow I/O (HTTP probes).
+- For multi-statement atomicity: `conn.setAutoCommit(false)` + `conn.commit()`.
+- Cache reads in script-local variables within a single invocation; avoid a DB round-trip on every cheap early-return path.
 
 ---
 
-## 5. Full example: dedupe scan check via BurpDB
+## 7. Full example: dedupe scan check via BurpDB
 
 ```java
 /**
@@ -142,8 +210,6 @@ BurpDB uses SQLite under the hood. The same concurrency rules as self-managed SQ
  **/
 
 // === BURP GLOBALS ===
-// Required:
-//   bambda-passive  (boolean: "true"/"false") — master on/off for passive checks
 if (!"true".equalsIgnoreCase(System.getProperty("bg.bambda-passive"))) {
     return AuditResult.auditResult();
 }
@@ -157,29 +223,22 @@ if (xcto != null && xcto.equalsIgnoreCase("nosniff")) return AuditResult.auditRe
 
 // === BURPDB DEDUPE ===
 var host = requestResponse.request().httpService().host();
-var dbUrl = System.getProperty("burp.db.url");
-if (dbUrl == null) {
+var driver = (java.sql.Driver) System.getProperties().get("burp.db.driver.instance");
+var dbUrl  = System.getProperty("burp.db.url");
+
+if (driver == null || dbUrl == null || dbUrl.isBlank()) {
     api().logging().logToOutput("[xcto-check] BurpDB not available; reporting without dedupe");
 } else {
-    boolean isNew = false;
-    try (var conn = java.sql.DriverManager.getConnection(dbUrl)) {
-        conn.setAutoCommit(false);
-
-        try (var ps = conn.prepareStatement(
-                "INSERT INTO findings(host, issue, detail, severity, created_at) " +
-                "VALUES(?, ?, ?, ?, strftime('%s','now')) " +
-                "ON CONFLICT(host, issue) DO NOTHING")) {
-            ps.setString(1, host);
-            ps.setString(2, "Missing X-Content-Type-Options");
-            ps.setString(3, "Header absent on " + requestResponse.request().url());
-            ps.setString(4, "LOW");
-            isNew = ps.executeUpdate() > 0;
-        }
-
-        conn.commit();
+    boolean isNew = true;
+    try (var conn = driver.connect(dbUrl, new java.util.Properties());
+         var ps = conn.prepareStatement(
+             "INSERT INTO kv(key, value, updated_at) VALUES(?, '1', strftime('%s','now')) " +
+             "ON CONFLICT(key) DO NOTHING")) {
+        ps.setString(1, "xcto-check.seen-host:" + host);
+        isNew = ps.executeUpdate() > 0;
     } catch (java.sql.SQLException e) {
         // Log and fail open — better a duplicate finding than a missed one
-        try (var conn2 = java.sql.DriverManager.getConnection(dbUrl);
+        try (var conn2 = driver.connect(dbUrl, new java.util.Properties());
              var ps = conn2.prepareStatement(
                  "INSERT INTO logs(created_at, reporter, details) VALUES(strftime('%s','now'), ?, ?)")) {
             ps.setString(1, "xcto-check");

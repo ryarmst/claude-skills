@@ -69,6 +69,16 @@
       "description": "Author Burp Suite Bambda scripts (custom scan checks, HTTP/WebSocket history filters, custom columns, and match-and-replace rules). Use whenever the user wants to write, modify, debug, or review a `.bambda` file or any Java snippet that runs inside Burp Suite Professional/Community via the Bambda runtime \u2014 including scan checks (active/passive, per-host/per-request/per-insertion-point), Proxy HTTP/WS history view filters, custom table columns, or proxy match-and-replace rules. For Repeater custom actions specifically, use the `burp-repeater-actions` skill instead. Triggers on phrases like \"Bambda\", \"custom scan check\", \"Burp filter script\", \"view filter\", \"custom column for Burp\", \"Montoya scan check\", or any reference to Burp's `function: SCAN_CHECK_*`, `VIEW_FILTER`, `CUSTOM_COLUMN`, `MATCH_AND_REPLACE_*` constants."
     },
     {
+      "name": "burp-custom-column-bambdas",
+      "version": "1.0.0",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/ryarmst/claude-skills.git",
+        "path": "skills/burp-custom-column-bambdas"
+      },
+      "description": "Author Burp Suite Custom Column Bambdas (CUSTOM_COLUMN function). Use when the user wants to write, modify, debug, or review a script that adds a column to the HTTP history, Logger, or WebSockets history table \u2014 including extracting header values, parsing JWT claims, counting parameters, detecting content types, decoding tokens, scoring requests, and any other per-row data extraction. Triggers on phrases like \"custom column\", \"table column\", \"Logger column\", \"HTTP history column\", \"CUSTOM_COLUMN\", or any request for a script that surfaces per-row data in a Burp table."
+    },
+    {
       "name": "burp-extension-montoya",
       "version": "1.0.0",
       "source": {

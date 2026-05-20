@@ -1,0 +1,11 @@
+id: 00000000-0000-0000-0000-000000000002
+name: TEMPLATE - Request parameter count
+function: CUSTOM_COLUMN
+location: LOGGER
+source: |+
+  /**
+   * Count all request parameters — sorts numerically for attack-surface triage.
+   * @author YOUR NAME
+   **/
+
+  return requestResponse.request().parameters().size();

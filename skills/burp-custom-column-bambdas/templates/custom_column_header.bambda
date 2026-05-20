@@ -1,0 +1,23 @@
+id: 00000000-0000-0000-0000-000000000001
+name: TEMPLATE - Response header value
+function: CUSTOM_COLUMN
+location: LOGGER
+burpglobal:
+  column-target-header: Server       # response header name to display (string)
+source: |+
+  /**
+   * Display a configurable response header value in a custom column.
+   * @author YOUR NAME
+   **/
+
+  final var header = java.util.Objects.requireNonNullElse(
+      System.getProperty("bg.column-target-header"), "Server"
+  );
+
+  if (!requestResponse.hasResponse()) {
+      return "";
+  }
+
+  return requestResponse.response().hasHeader(header)
+      ? requestResponse.response().headerValue(header)
+      : "";

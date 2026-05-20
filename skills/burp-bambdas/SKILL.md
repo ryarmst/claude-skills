@@ -22,7 +22,7 @@ Bambdas are not interchangeable. The same code that works as a scan check is a s
 | Passive scan check, runs per base request | `SCAN_CHECK_PASSIVE_PER_REQUEST` | `AuditResult` | `references/scan_checks.md` |
 | Passive scan check, runs per insertion point | `SCAN_CHECK_PASSIVE_PER_INSERTION_POINT` | `AuditResult` | `references/scan_checks.md` |
 | Proxy HTTP/WS history view filter | `VIEW_FILTER` | `boolean` | `references/filters_columns_actions_mr.md` |
-| Custom table column | `CUSTOM_COLUMN` | `String` | `references/filters_columns_actions_mr.md` |
+| Custom table column | `CUSTOM_COLUMN` | `String` / `int` / `boolean` | **burp-custom-column-bambdas** skill (or `references/filters_columns_actions_mr.md`) |
 | Repeater/Intruder custom action | `CUSTOM_ACTION` | `void` (side effects via editor APIs) | `references/filters_columns_actions_mr.md` |
 | Proxy match & replace, request | `MATCH_AND_REPLACE_REQUEST` | `HttpRequest` | `references/filters_columns_actions_mr.md` |
 | Proxy match & replace, response | `MATCH_AND_REPLACE_RESPONSE` | `HttpResponse` | `references/filters_columns_actions_mr.md` |
@@ -33,7 +33,7 @@ If the user just says "write me a Bambda for X", use this decision tree, and **o
 
 1. Does the user want to *find a vulnerability* / report an issue? → **Scan check.** Now disambiguate (see below).
 2. Does the user want to *show/hide rows in HTTP history or WS history*? → `VIEW_FILTER`.
-3. Does the user want to *add a column* to a Burp table? → `CUSTOM_COLUMN`.
+3. Does the user want to *add a column* to a Burp table? → `CUSTOM_COLUMN`. Use the **burp-custom-column-bambdas** skill.
 4. Does the user want to *transform a request or response in flight*? → `MATCH_AND_REPLACE_REQUEST` or `_RESPONSE`.
 5. Does the user want a *button in Repeater/Intruder* that operates on the current request? → `CUSTOM_ACTION`.
 

@@ -1,10 +1,12 @@
 # Custom Column Bambda Templates
 
+Each template lives in `templates/` and is ready to import into the Bambda library. Custom columns run automatically — there is no gate global.
+
 | Template | Location | Returns | When to use |
 |----------|----------|---------|-------------|
-| TEMPLATE - Response header value | `LOGGER` | `String` | Display any response header value in the table. Configurable via `bg.column-target-header` (default: `Server`). Start here — it's the official PortSwigger example pattern. |
-| TEMPLATE - Request parameter count | `LOGGER` | `int` | Count all request parameters per row. Sorts numerically, making it ideal for attack-surface triage: sort descending to find the most complex endpoints first. |
-| TEMPLATE - Regex extraction from response body | `LOGGER` | `String` | Extract the first regex match (or first capture group) from the response body. Default pattern finds JWTs. Configure via `bg.column-regex-pattern` and `bg.column-regex-maxlen`. |
+| TEMPLATE - Response header value | `LOGGER` | `String` | Display any response header. Tunable via `bg.column-target-header` (default: `Server`). Start here — matches the official PortSwigger pattern. |
+| TEMPLATE - Request parameter count | `LOGGER` | `int` | Count all request parameters per row. Sorts numerically — sort descending to find complex endpoints first. |
+| TEMPLATE - Regex extraction from response body | `LOGGER` | `String` | First regex match (or capture group) from the response body. Default pattern finds JWTs. Tune via `bg.column-regex-pattern` and `bg.column-regex-maxlen`. |
 
 ## Key differences from CUSTOM_ACTION
 
@@ -15,17 +17,21 @@
 | `api()` | ✗ Not available | ✓ Available |
 | `logging()` | ✗ Not available | ✓ Available |
 | `utilities` | Bare field: `utilities.base64Utils()` | Method: `utilities().base64Utils()` |
-| `selection` | ✗ Not available | ✓ Available |
 | Performance | Critical — runs per-row, per-update | Low concern — runs once on click |
-| Burp Globals gate | Not used (column runs automatically) | Required (`bg.bambda-action`) |
+| Burp Globals gate | Not used | Required (`bg.bambda-action`) |
+| Persistence | Avoid — see SKILL.md §8 | Use **burp-bambda-persistence** when needed |
 
 ## Supported locations
 
-`LOGGER` is recommended as the default — it captures traffic from all tools (Proxy, Repeater, Scanner, etc.). Use `HTTP_HISTORY` or `WEBSOCKETS_HISTORY` if you want the column only in that specific table.
+| `location:` | Table |
+|---|---|
+| `LOGGER` | Logger (recommended default — all tools) |
+| `PROXY_HTTP_HISTORY` | Proxy HTTP history only |
+| `PROXY_WS_HISTORY` | Proxy WebSockets history only |
 
 ## Adding to Burp
 
 1. Extensions → Bambda library → Import the `.bambda` file.
-2. In the target table (Logger / HTTP history): options menu → **Add custom column** → Load → select the script.
-3. Enter a column header name.
+2. In the target table: options menu → **Add custom column** → Load → select the script.
+3. Enter a **Column header** name (this is what appears in the table, not the YAML `name:`).
 4. Click **Apply & close**.
